@@ -1,0 +1,92 @@
+version: "3.9"
+
+services:
+  users-db:
+    image: postgres:16
+    container_name: users-db
+    environment:
+      POSTGRES_DB: users_db
+      POSTGRES_USER: users_user
+      POSTGRES_PASSWORD: users_pass
+    ports:
+      - "5433:5432"
+
+  products-db:
+    image: postgres:16
+    container_name: products-db
+    environment:
+      POSTGRES_DB: products_db
+      POSTGRES_USER: products_user
+      POSTGRES_PASSWORD: products_pass
+    ports:
+      - "5434:5432"
+
+  orders-db:
+    image: postgres:16
+    container_name: orders-db
+    environment:
+      POSTGRES_DB: orders_db
+      POSTGRES_USER: orders_user
+      POSTGRES_PASSWORD: orders_pass
+    ports:
+      - "5435:5432"
+
+  notifications-db:
+    image: postgres:16
+    container_name: notifications-db
+    environment:
+      POSTGRES_DB: notifications_db
+      POSTGRES_USER: notifications_user
+      POSTGRES_PASSWORD: notifications_pass
+    ports:
+      - "5436:5432"
+
+  users-service:
+    build: ./services/users-service
+    container_name: users-service
+    depends_on:
+      - users-db
+    ports:
+      - "8001:8001"
+
+  products-service:
+    build: ./services/products-service
+    container_name: products-service
+    depends_on:
+      - products-db
+    ports:
+      - "8002:8002"
+
+  notifications-service:
+    build: ./services/notifications-service
+    container_name: notifications-service
+    depends_on:
+      - notifications-db
+    ports:
+      - "8003:8003"
+
+  orders-service:
+    build: ./services/orders-service
+    container_name: orders-service
+    depends_on:
+      - orders-db
+      - users-service
+      - products-service
+      - notifications-service
+    environment:
+      USERS_SERVICE_URL: http://users-service:8001
+      PRODUCTS_SERVICE_URL: http://products-service:8002
+      NOTIFICATIONS_SERVICE_URL: http://notifications-service:8003
+    ports:
+      - "8000:8000"
+
+  api-gateway:
+    build: ./gateway
+    container_name: api-gateway
+    depends_on:
+      - users-service
+      - products-service
+      - orders-service
+      - notifications-service
+    ports:
+      - "8080:80"
