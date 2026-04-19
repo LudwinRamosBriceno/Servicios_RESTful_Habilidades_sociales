@@ -1,8 +1,38 @@
+# Python bytecode
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.env
+*$py.class
+
+# Virtual environments
 .venv/
+venv/
+env/
+
+# Local environment files
+.env
+.env.*
+
+# Python tooling caches and reports
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Editor/IDE
 .vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local logs
+*.log
+logs.txt
+
+# Local Postman scratch data
+.postman/
