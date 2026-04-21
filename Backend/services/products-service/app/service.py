@@ -5,7 +5,6 @@ from fastapi import HTTPException, status
 from .models import CreateProductRequest, Product, ProductResponse, UpdateProductRequest, UpdateStockRequest
 from .repository import ProductRepository
 
-
 class ProductService:
     def __init__(self, repository: ProductRepository) -> None:
         self._repository = repository
@@ -26,8 +25,6 @@ class ProductService:
             id=product_id,
             name=payload.name,
             description=payload.description,
-            difficulty=payload.difficulty,
-            xp_points=payload.xpPoints,
             stock=payload.stock,
             active=payload.active,
         )
@@ -43,10 +40,6 @@ class ProductService:
             product.name = payload.name
         if payload.description is not None:
             product.description = payload.description
-        if payload.difficulty is not None:
-            product.difficulty = payload.difficulty
-        if payload.xpPoints is not None:
-            product.xp_points = payload.xpPoints
         if payload.stock is not None:
             product.stock = payload.stock
         if payload.active is not None:
@@ -59,6 +52,7 @@ class ProductService:
         product = self._repository.find_by_id(product_id)
         if not product:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+        
         self._repository.delete(product_id)
 
     def discount_stock(self, product_id: str, payload: UpdateStockRequest) -> ProductResponse:
@@ -80,8 +74,6 @@ class ProductService:
             id=product.id,
             name=product.name,
             description=product.description,
-            difficulty=product.difficulty,
-            xpPoints=product.xp_points,
             stock=product.stock,
             active=product.active,
         )
@@ -91,21 +83,21 @@ class ProductService:
             return
 
         seed_data = [
-            Product(id="hab_001", name="empatia", description="Comprender emociones ajenas", difficulty=1, xp_points=50, stock=100, active=True),
-            Product(id="hab_002", name="amistad", description="Crear vinculos positivos", difficulty=1, xp_points=45, stock=100, active=True),
-            Product(id="hab_003", name="liderazgo", description="Guiar equipos", difficulty=2, xp_points=80, stock=80, active=True),
-            Product(id="hab_004", name="creatividad", description="Generar ideas nuevas", difficulty=2, xp_points=70, stock=90, active=True),
-            Product(id="hab_005", name="resiliencia", description="Superar adversidad", difficulty=3, xp_points=100, stock=70, active=True),
-            Product(id="hab_006", name="comunicacion", description="Transmitir ideas claramente", difficulty=2, xp_points=60, stock=100, active=True),
-            Product(id="hab_007", name="colaboracion", description="Trabajar en equipo", difficulty=1, xp_points=55, stock=110, active=True),
-            Product(id="hab_008", name="sagacidad", description="Percibir con agudeza", difficulty=3, xp_points=95, stock=60, active=True),
-            Product(id="hab_009", name="paciencia", description="Mantener calma", difficulty=1, xp_points=40, stock=120, active=True),
-            Product(id="hab_010", name="respeto", description="Valorar a los demas", difficulty=1, xp_points=50, stock=120, active=True),
-            Product(id="hab_011", name="confianza", description="Seguridad personal y social", difficulty=2, xp_points=65, stock=90, active=True),
-            Product(id="hab_012", name="humor", description="Usar humor apropiado", difficulty=1, xp_points=35, stock=100, active=True),
-            Product(id="hab_013", name="adaptabilidad", description="Ajustarse al cambio", difficulty=2, xp_points=75, stock=80, active=True),
-            Product(id="hab_014", name="escucha activa", description="Escuchar con atencion", difficulty=2, xp_points=70, stock=95, active=True),
-            Product(id="hab_015", name="iniciativa", description="Actuar de forma proactiva", difficulty=2, xp_points=85, stock=85, active=True),
+            Product(id="hab_001", name="empatia", description="Comprender emociones ajenas", stock=100, active=True),
+            Product(id="hab_002", name="amistad", description="Crear vinculos positivos", stock=100, active=True),
+            Product(id="hab_003", name="liderazgo", description="Guiar equipos", stock=80, active=True),
+            Product(id="hab_004", name="creatividad", description="Generar ideas nuevas", stock=90, active=True),
+            Product(id="hab_005", name="resiliencia", description="Superar adversidad", stock=70, active=True),
+            Product(id="hab_006", name="comunicacion", description="Transmitir ideas claramente", stock=100, active=True),
+            Product(id="hab_007", name="colaboracion", description="Trabajar en equipo", stock=110, active=True),
+            Product(id="hab_008", name="sagacidad", description="Percibir con agudeza", stock=60, active=True),
+            Product(id="hab_009", name="paciencia", description="Mantener calma", stock=120, active=True),
+            Product(id="hab_010", name="respeto", description="Valorar a los demas", stock=120, active=True),
+            Product(id="hab_011", name="confianza", description="Seguridad personal y social", stock=90, active=True),
+            Product(id="hab_012", name="humor", description="Usar humor apropiado", stock=100, active=True),
+            Product(id="hab_013", name="adaptabilidad", description="Ajustarse al cambio", stock=80, active=True),
+            Product(id="hab_014", name="escucha activa", description="Escuchar con atencion", stock=95, active=True),
+            Product(id="hab_015", name="iniciativa", description="Actuar de forma proactiva", stock=85, active=True),
         ]
 
         for product in seed_data:

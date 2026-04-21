@@ -25,6 +25,8 @@ spec:
               value: http://products-service:8002
             - name: NOTIFICATIONS_SERVICE_URL
               value: http://notifications-service:8003
+            - name: DATABASE_URL
+              value: postgresql+psycopg2://postgres@orders-db:5432/orders_db
 ---
 apiVersion: v1
 kind: Service

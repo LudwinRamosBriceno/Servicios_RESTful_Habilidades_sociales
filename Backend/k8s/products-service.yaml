@@ -18,6 +18,9 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8002
+          env:
+            - name: DATABASE_URL
+              value: postgresql+psycopg2://products_user:products_pass@products-db:5432/products_db
 ---
 apiVersion: v1
 kind: Service
