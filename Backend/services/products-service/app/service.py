@@ -19,7 +19,7 @@ class ProductService:
     def get_product(self, product_id: str) -> ProductResponse:
         product = self._repository.find_by_id(product_id)
         if not product:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
         return self._to_response(product)
 
     # Metodo para crear un nuevo producto
@@ -39,7 +39,7 @@ class ProductService:
     def update_product(self, product_id: str, payload: UpdateProductRequest) -> ProductResponse:
         product = self._repository.find_by_id(product_id)
         if not product:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
 
         if payload.name is not None:
             product.name = payload.name
@@ -57,7 +57,7 @@ class ProductService:
     def delete_product(self, product_id: str) -> None:
         product = self._repository.find_by_id(product_id)
         if not product:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
         
         self._repository.delete(product_id)
 
@@ -65,11 +65,11 @@ class ProductService:
     def discount_stock(self, product_id: str, payload: UpdateStockRequest) -> ProductResponse:
         product = self._repository.find_by_id(product_id)
         if not product:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
         if payload.quantity <= 0:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Quantity must be > 0")
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="La cantidad debe ser > 0")
         if product.stock < payload.quantity:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Insufficient stock")
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Stock insuficiente")
 
         product.stock -= payload.quantity
         self._repository.save(product)
