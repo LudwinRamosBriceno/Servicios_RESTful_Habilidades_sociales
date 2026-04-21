@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   users-db:
-    image: postgres:16
+    image: postgres:18
     container_name: users-db
     environment:
       POSTGRES_DB: users_db
@@ -12,7 +12,7 @@ services:
       - "5433:5432"
 
   products-db:
-    image: postgres:16
+    image: postgres:18
     container_name: products-db
     environment:
       POSTGRES_DB: products_db
@@ -22,17 +22,17 @@ services:
       - "5434:5432"
 
   orders-db:
-    image: postgres:16
+    image: postgres:18
     container_name: orders-db
     environment:
       POSTGRES_DB: orders_db
-      POSTGRES_USER: orders_user
-      POSTGRES_PASSWORD: orders_pass
+      POSTGRES_USER: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - "5435:5432"
 
   notifications-db:
-    image: postgres:16
+    image: postgres:18
     container_name: notifications-db
     environment:
       POSTGRES_DB: notifications_db
@@ -77,6 +77,7 @@ services:
       USERS_SERVICE_URL: http://users-service:8001
       PRODUCTS_SERVICE_URL: http://products-service:8002
       NOTIFICATIONS_SERVICE_URL: http://notifications-service:8003
+      DATABASE_URL: postgresql+psycopg2://postgres@orders-db:5432/orders_db
     ports:
       - "8000:8000"
 
