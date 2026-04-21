@@ -9,12 +9,16 @@ from .clients.product_http_client import ProductHttpClient
 
 
 class UserService:
+    """Servicio para gestionar usuarios y sus habilidades."""
+
     def __init__(self, repository: UserRepository) -> None:
         self._repository = repository
+        # URL configurable para poder cambiar entre entornos local/docker/k8s.
         products_service_url = os.getenv("PRODUCTS_SERVICE_URL", "http://products-service:8002")
         self._product_client = ProductHttpClient(products_service_url)
 
     def create_user(self, payload: CreateUserRequest) -> UserResponse:
+        """Crea un usuario validando que el nombre no exista previamente."""
         existing_user = self._repository.get_by_name(payload.name)
         if existing_user:
             raise HTTPException(
@@ -22,6 +26,7 @@ class UserService:
                 detail="User name already exists",
             )
 
+        # ID corto con prefijo funcional para facilitar trazabilidad en logs.
         user = User(
             id=f"usr_{uuid.uuid4().hex[:8]}",
             name=payload.name,
@@ -32,23 +37,27 @@ class UserService:
         return self._to_response(user)
     
     def list_users(self) -> list[UserNameResponse]:
+        """Lista únicamente nombres de usuarios para vistas livianas."""
         users = self._repository.find_all()
         if not users:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No users found")
         return [UserNameResponse(name=user.name) for user in users]
 
     def get_user(self, user_id: str) -> UserResponse:
+        """Obtiene un usuario por su ID."""
         user = self._repository.get_by_id(user_id)
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
         return self._to_response(user)
 
     def update_user(self, user_id: str, payload: UpdateUserRequest) -> UserResponse:
+        """Actualiza campos del usuario de forma parcial (solo si llegan en payload)."""
         user = self._repository.get_by_id(user_id)
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
         if payload.name is not None:
+            # Evita colisiones de nombre con otros usuarios.
             existing_user = self._repository.get_by_name(payload.name)
             if existing_user and existing_user.id != user.id:
                 raise HTTPException(
@@ -65,10 +74,11 @@ class UserService:
         return self._to_response(user)
 
     def get_user_skills(self, user_id: str) -> dict:
+        """Devuelve las habilidades del usuario con nombre legible."""
         user = self._repository.get_by_id(user_id)
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-        # Enriquecer skills con nombre para facilitar visualizacion en el cliente.
+        # Skills con nombre para facilitar visualizacion en el cliente.
         return {
             "userId": user.id,
             "skills": [
@@ -82,6 +92,7 @@ class UserService:
         }
 
     def add_skill(self, user_id: str, payload: AddSkillRequest) -> AddSkillResponse:
+        """Agrega una habilidad o acumula puntos si ya existe en el usuario."""
         user = self._repository.get_by_id(user_id)
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -102,6 +113,7 @@ class UserService:
         )
 
     def _to_response(self, user: User) -> UserResponse:
+        """Mapea el modelo interno a DTO de respuesta para la API."""
         from .models import UserSkill
         skills_list = [
             UserSkill(skillId=skill_id, skillName=self._resolve_skill_name(skill_id), skillPoints=points)
@@ -116,5 +128,6 @@ class UserService:
         )
 
     def _resolve_skill_name(self, skill_id: str) -> str:
+        """Busca el nombre en products-service y, si no existe, devuelve 'Unknown skill'."""
         skill_name = self._product_client.get_product_name(skill_id)
         return skill_name if skill_name else "Unknown skill"
