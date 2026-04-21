@@ -42,7 +42,7 @@ class OrderService:
         """
         Crea una nueva orden, manejando la lógica de negocio relacionada con la validación de la solicitud,
         la verificación de la existencia del usuario y el producto, la actualización del stock del producto,
-        la creación de la orden, la adición de puntos de experiencia al usuario, y el envío de una notificación 
+        la creación de la orden, la adición de puntos de habilidad al usuario, y el envío de una notificación 
         de orden completada.
         Argumentos:
             payload (OrderRequest): Datos de la orden a crear, incluyendo el ID del usuario, el ID del producto y la cantidad.
@@ -60,23 +60,23 @@ class OrderService:
 
         self._product_client.discount_stock(payload.productId, payload.quantity)
 
-        xp_gained = product.xpPoints * payload.quantity
+        skill_points = payload.quantity
         order = Order(
             id=f"ord_{uuid.uuid4().hex[:8]}",
             user_id=payload.userId,
             product_id=payload.productId,
             quantity=payload.quantity,
             status=OrderStatus.COMPLETED,
-            xp_gained=xp_gained,
+            skill_points=skill_points,
             created_at=utc_now_iso(),
         )
         self._repository.create(order)
 
-        already_owned = self._user_client.add_skill(payload.userId, payload.productId, xp_gained)
-        self._notification_client.send_order_completed(order.id, payload.userId, product.name, xp_gained)
+        already_owned = self._user_client.add_skill(payload.userId, payload.productId, skill_points)
+        self._notification_client.send_order_completed(order.id, payload.userId, product.name, skill_points)
 
         http_status = status.HTTP_202_ACCEPTED if already_owned else status.HTTP_201_CREATED
-        message = "Skill already owned, XP added" if already_owned else "Order completed successfully"
+        message = "Skill already owned, points added" if already_owned else "Order completed successfully"
 
         return self._to_result(order, message), http_status
 
@@ -121,6 +121,6 @@ class OrderService:
             productId=order.product_id,
             status=order.status,
             message=message,
-            xpGained=order.xp_gained,
+            skillPoints=order.skill_points,
             createdAt=order.created_at,
         )

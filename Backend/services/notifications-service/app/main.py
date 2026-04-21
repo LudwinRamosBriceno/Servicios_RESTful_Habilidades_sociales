@@ -8,7 +8,7 @@ class NotificationRequest(BaseModel):
     orderId: str
     userId: str
     skillName: str
-    xpGained: int
+    skillPoints: int
 
 
 @app.post("/notifications")
@@ -16,7 +16,7 @@ def create_notification(payload: NotificationRequest):
     print(
         "[NOTIFICATION] "
         f"order={payload.orderId} user={payload.userId} "
-        f"skill={payload.skillName} xp={payload.xpGained}"
+        f"skill={payload.skillName} points={payload.skillPoints}"
     )
     return {"message": "Notification processed", "orderId": payload.orderId}
 

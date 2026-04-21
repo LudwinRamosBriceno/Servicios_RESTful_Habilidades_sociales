@@ -5,43 +5,33 @@ from fastapi import HTTPException, status
 from .models import CreateProductRequest, Product, ProductResponse, UpdateProductRequest, UpdateStockRequest
 from .repository import ProductRepository
 
-# Servicio de productos con lógica de negocio
 class ProductService:
     def __init__(self, repository: ProductRepository) -> None:
         self._repository = repository
-        self._seed_products() # Productos de prueba
+        self._seed_products()
 
-    # Metodo para listar todos los productos
     def list_products(self) -> list[ProductResponse]:
         return [self._to_response(product) for product in self._repository.find_all()]
 
-    # Metodo para obtener un producto por su ID
     def get_product(self, product_id: str) -> ProductResponse:
-        # Aquí se usaría un query a la base de datos
         product = self._repository.find_by_id(product_id)
         if not product:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
         return self._to_response(product)
 
-    # Metodo para crear un nuevo producto
     def create_product(self, payload: CreateProductRequest) -> ProductResponse:
         product_id = payload.id or f"hab_{uuid.uuid4().hex[:6]}"
         product = Product(
             id=product_id,
             name=payload.name,
             description=payload.description,
-            #difficulty=payload.difficulty,
-            #xp_points=payload.xpPoints,
             stock=payload.stock,
             active=payload.active,
         )
-        # Aquí se guardaría el producto en la base de datos
         self._repository.save(product)
         return self._to_response(product)
 
-    # Metodo para actualizar un producto existente
     def update_product(self, product_id: str, payload: UpdateProductRequest) -> ProductResponse:
-        # se busca el producto por id en la base de datos (aun no)
         product = self._repository.find_by_id(product_id)
         if not product:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
@@ -50,32 +40,22 @@ class ProductService:
             product.name = payload.name
         if payload.description is not None:
             product.description = payload.description
-        #if payload.difficulty is not None:
-        #    product.difficulty = payload.difficulty
-        #if payload.xpPoints is not None:
-        #    product.xp_points = payload.xpPoints
         if payload.stock is not None:
             product.stock = payload.stock
         if payload.active is not None:
             product.active = payload.active
 
-        # Aquí se actualizaría el producto en la base de datos
         self._repository.save(product)
         return self._to_response(product)
 
-    # Metodo para eliminar un producto
     def delete_product(self, product_id: str) -> None:
-        # Se busca el producto por id en la base de datos (aun no)
         product = self._repository.find_by_id(product_id)
         if not product:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
         
-        # Se elimina el producto de la base de datos (aun no)
         self._repository.delete(product_id)
 
-    # Metodo para descontar stock de un producto
     def discount_stock(self, product_id: str, payload: UpdateStockRequest) -> ProductResponse:
-        # Se busca el producto por id en la base de datos (aun no)
         product = self._repository.find_by_id(product_id)
         if not product:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
@@ -88,15 +68,12 @@ class ProductService:
         self._repository.save(product)
         return self._to_response(product)
 
-    # 
     @staticmethod
     def _to_response(product: Product) -> ProductResponse:
         return ProductResponse(
             id=product.id,
             name=product.name,
             description=product.description,
-            #difficulty=product.difficulty,
-            #xpPoints=product.xp_points,
             stock=product.stock,
             active=product.active,
         )

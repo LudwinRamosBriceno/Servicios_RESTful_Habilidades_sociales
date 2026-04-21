@@ -26,14 +26,14 @@ class OrderStatus(str, Enum):
 class Order(BaseModel):
     """
     Modelo de datos para representar una orden, incluyendo su ID, ID del usuario, ID del producto, 
-    cantidad, estado, puntos de experiencia ganados, y fecha de creación.
+    cantidad, estado, puntos de habilidad asignados, y fecha de creación.
     """
     id: str
     user_id: str
     product_id: str
     quantity: int
     status: OrderStatus
-    xp_gained: int
+    skill_points: int
     created_at: str
 
 
@@ -55,7 +55,7 @@ class OrderResult(BaseModel):
     productId: str
     status: OrderStatus
     message: str
-    xpGained: int
+    skillPoints: int
     createdAt: str
 
 
@@ -75,4 +75,4 @@ class ProductDTO(BaseModel):
     id: str
     name: str
     stock: int
-    xpPoints: int
+

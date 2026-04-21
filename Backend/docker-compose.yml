@@ -46,6 +46,10 @@ services:
     container_name: users-service
     depends_on:
       - users-db
+      - products-service
+    environment:
+      DATABASE_URL: postgresql+psycopg2://users_user:users_pass@users-db:5432/users_db
+      PRODUCTS_SERVICE_URL: http://products-service:8002
     ports:
       - "8001:8001"
 
@@ -54,6 +58,8 @@ services:
     container_name: products-service
     depends_on:
       - products-db
+    environment:
+      DATABASE_URL: postgresql+psycopg2://products_user:products_pass@products-db:5432/products_db
     ports:
       - "8002:8002"
 

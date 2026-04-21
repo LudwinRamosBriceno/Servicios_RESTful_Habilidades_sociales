@@ -37,13 +37,13 @@ class UserHttpClient:
         payload = response.json()
         return UserDTO(id=payload["id"], name=payload["name"], email=payload["email"])
 
-    def add_skill(self, user_id: str, skill_id: str, xp_points: int) -> bool:
+    def add_skill(self, user_id: str, skill_id: str, skill_points: int) -> bool:
         """
         Agrega una habilidad a un usuario, proporcionando el ID del usuario, el ID de la habilidad 
         y los puntos de experiencia a agregar.
         Maneja errores de conexión, usuario no encontrado, y respuestas no exitosas. Devuelve
         """
-        body = {"skillId": skill_id, "xpPoints": xp_points}
+        body = {"skillId": skill_id, "skillPoints": skill_points}
         try:
             response = httpx.put(f"{self._base_url}/users/{user_id}/skills", json=body, timeout=self._timeout)
         except httpx.RequestError as exc:

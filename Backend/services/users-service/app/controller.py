@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from .models import AddSkillRequest, CreateUserRequest, UpdateUserRequest
+from .models import AddSkillRequest, CreateUserRequest, UpdateUserRequest, UserNameResponse
 from .repository import UserRepository
 from .service import UserService
 
@@ -12,11 +12,13 @@ service = UserService(UserRepository())
 def create_user(payload: CreateUserRequest):
     return service.create_user(payload)
 
+@router.get("")
+def list_users() -> list[UserNameResponse]:
+    return service.list_users()
 
 @router.get("/{user_id}")
 def get_user(user_id: str):
     return service.get_user(user_id)
-
 
 @router.put("/{user_id}")
 def update_user(user_id: str, payload: UpdateUserRequest):
