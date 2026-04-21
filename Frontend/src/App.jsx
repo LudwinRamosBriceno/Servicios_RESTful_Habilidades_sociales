@@ -38,7 +38,7 @@ function App() {
     }
 
     loadInitialData()
-  }, [addToast])
+  }, [])
 
   // Controlar el ingreso del usuario
   const handleLogin = async (selectedUser) => {

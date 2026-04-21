@@ -1,26 +1,33 @@
-const API_URL_BASE = import.meta.env.VITE_API_URL_BASE;
+const API_URL_BASE = import.meta.env.VITE_API_BASE_URL;
 
 // Función para realizar solicitud HTTP a la API
 async function request(path, options = {}) {
-    
+
     // Obtiene la configuración de la solicitud
     const { method = 'GET', headers = {}, body } = options;
+
+    console.log(`[Frontend]' API_URL_BASE: ${API_URL_BASE}, Path: ${path}, Method: ${method}, Body:`, body)
+
+    const requestHeaders = {
+        ...headers,
+    }
+
+    if (body) {
+        requestHeaders['Content-Type'] = 'application/json'
+    }
 
     // Realizar la solicitud utilizando fetch con la configuración proporcionada
     const response = await fetch(`${API_URL_BASE}${path}`, {
         // GET, POST, PUT, DELETE
         method,
-        // Encabezados, indica al backend que el cuerpo es JSON
-        headers: {
-            'Content-Type': 'application/json',
-            ...headers,
-        },
+        // Encabezados de la solicitud
+        headers: requestHeaders,
         // Convertir el cuerpo a JSON si se proporciona
         body: body ? JSON.stringify(body) : undefined,
     })
 
     // Obtener del header de la respuesta el tipo de contenido
-    const contentType = response.headers.get('Content-Type');
+    const contentType = response.headers.get('Content-Type') || '';
     // Verificar si el header indica que la respuesta es JSON
     const isJson = contentType.includes('application/json');
     // Procesar la respuesta como JSON o texto según el tipo de contenido
@@ -36,7 +43,7 @@ async function request(path, options = {}) {
             (typeof payload === 'string' && payload) ||
             // Si no es JSON ni texto, usar un mensaje genérico
             'Fallo en la solicitud'
-        
+
         // Crear un error con el mensaje
         const error = new Error(message)
         // Incluir el código de estado (error)
@@ -59,15 +66,15 @@ export async function get(path, options = {}) {
 
 // Función para realizar solicitud HTTP POST
 export function post(path, body, options = {}) {
-  return request(path, { ...options, method: 'POST', body })
+    return request(path, { ...options, method: 'POST', body })
 }
 
 // Función para realizar solicitud HTTP PUT
 export function put(path, body, options = {}) {
-  return request(path, { ...options, method: 'PUT', body })
+    return request(path, { ...options, method: 'PUT', body })
 }
 
 // Función para realizar solicitud HTTP DELETE
 export function del(path, options = {}) {
-  return request(path, { ...options, method: 'DELETE' })
+    return request(path, { ...options, method: 'DELETE' })
 }
