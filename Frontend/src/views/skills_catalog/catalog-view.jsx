@@ -1,18 +1,22 @@
-import { BookOpen, Package } from 'lucide-react'
+import { BookOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import './catalog-view.css'
 
+// Maneja la visualización del estado de stock de cada habilidad en el catálogo.
 function StockBadge({ stock }) {
+  // Sin existencia
   if (stock === 0) {
-    return <span className="stock-badge stock-badge-outofstock">Out of stock</span>
+    return <span className="stock-badge stock-badge-outofstock">Sin existencia</span>
   }
+  // Stock bajo
   if (stock <= 15) {
     return (
       <span className="stock-badge stock-badge-low">
-        {stock} pts — Low
+        {stock} pts
       </span>
     )
   }
+  // Stock disponible
   return (
     <span className="stock-badge stock-badge-available">
       {stock} pts
@@ -20,83 +24,86 @@ function StockBadge({ stock }) {
   )
 }
 
+/**
+ * Componente de vista del catálogo de habilidades.
+ */
 export function CatalogView({ skills, onOrderClick }) {
-  const totalAvailable = skills.filter((s) => s.stock > 0).length
 
+  // Renderizar la vista del catálogo
   return (
     <main className="catalog-main">
-      {/* Header */}
+      
+      {/* Encabezado */}
       <section className="catalog-header">
         <div className="catalog-header-content">
           <div className="catalog-header-title-row">
-            <BookOpen className="w-5 h-5" style={{ color: '#2A5F7A' }} />
-            <h2 className="catalog-header-title">Skills Catalog</h2>
+            <h2 className="catalog-header-title">Catálogo de Habilidades</h2>
           </div>
           <p className="catalog-header-subtitle">
-            Browse all available soft skills. Click &ldquo;Order&rdquo; to acquire points.
+            Explora todas las habilidades blandas disponibles. Haz clic en "Ordenar" para adquirir puntos.
           </p>
-        </div>
-        <div className="catalog-stats">
-          <div className={`catalog-stat-card catalog-stat-card-total`}>
-            <p className="catalog-stat-value catalog-stat-value-total">{skills.length}</p>
-            <p className="catalog-stat-label">Total Skills</p>
-          </div>
-          <div className={`catalog-stat-card catalog-stat-card-instock`}>
-            <p className="catalog-stat-value catalog-stat-value-instock">{totalAvailable}</p>
-            <p className="catalog-stat-label">In Stock</p>
-          </div>
         </div>
       </section>
 
       {/* Table */}
       <section className="catalog-section">
-        <div className="catalog-section-header">
-          <Package className="w-4 h-4" style={{ color: '#2A5F7A' }} />
-          <h3 className="catalog-section-title">Available Skills</h3>
-        </div>
+
+        {/* Tabla de habilidades */}
         <div className="catalog-table-wrapper">
           <table className="catalog-table">
+
+            {/* Encabezado de la tabla */}
             <thead className="catalog-table-head">
               <tr>
-                <th className="catalog-table-header">#</th>
-                <th className="catalog-table-header catalog-table-skill">Skill Name</th>
+                <th className="catalog-table-header catalog-table-skill">Habilidad</th>
                 <th className="catalog-table-header catalog-table-header-stock">Stock</th>
-                <th className="catalog-table-header catalog-table-header-action">Action</th>
+                <th className="catalog-table-header catalog-table-header-action">Acción</th>
               </tr>
             </thead>
+            
+            {/* Cuerpo de la tabla con habilidades */}
             <tbody>
-              {skills.map((skill, idx) => (
+              {skills.map((skill) => (
+                
+                // Filas de la tabla (nombre de habilidad, stock y botón de acción)
                 <tr
-                  key={skill.name}
+                  key={skill.id}
                   className={cn(
                     'catalog-table-row',
                     skill.stock > 0 ? 'catalog-table-row-available' : 'catalog-table-row-unavailable',
-                    idx % 2 !== 0 && 'catalog-table-row-alt'
                   )}
                 >
-                  <td className="catalog-table-cell catalog-table-cell-index">{String(idx + 1).padStart(2, '0')}</td>
+                  {/* Celda de nombre de habilidad */}
                   <td className="catalog-table-cell catalog-table-skill">{skill.name}</td>
+
+                  {/* Celda de stock con badge */}
                   <td className="catalog-table-cell catalog-table-cell-stock">
                     <StockBadge stock={skill.stock} />
                   </td>
+
+                  {/* Celda de acción con botón de ordenar */}
                   <td className="catalog-table-cell catalog-table-cell-action">
                     <button
-                      onClick={() => onOrderClick(skill.name)}
+                      onClick={() => onOrderClick(skill.id)} // Llamar a la función de pedido con el id de la habilidad
                       disabled={skill.stock === 0}
                       className={cn(
                         'catalog-order-button',
                         skill.stock > 0 ? 'catalog-order-button-available' : 'catalog-order-button-unavailable'
                       )}
                     >
-                      {skill.stock > 0 ? 'Order' : 'Unavailable'}
+                      {skill.stock > 0 ? 'Ordenar' : 'No Disponible'}
                     </button>
                   </td>
                 </tr>
+
               ))}
             </tbody>
+            
           </table>
+
         </div>
       </section>
+      
     </main>
   )
 }

@@ -1,4 +1,4 @@
-/* Orders view styling */
+/* Estilos para la vista de pedidos */
 .orders-main {
   max-width: 42rem;
   margin-left: auto;
@@ -58,7 +58,7 @@
   color: var(--destructive);
 }
 
-/* Skill selector */
+/* Selector de habilidades */
 .orders-skill-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -106,44 +106,7 @@
   cursor: not-allowed;
 }
 
-/* Stock info */
-.orders-stock-info {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  border-radius: 1rem;
-  background-color: rgba(207, 232, 247, 0.5);
-  border: 1px solid var(--secondary);
-}
-
-.orders-stock-icon {
-  width: 1rem;
-  height: 1rem;
-  flex-shrink: 0;
-  margin-top: 0.125rem;
-}
-
-.orders-stock-text {
-  font-size: 0.875rem;
-}
-
-.orders-stock-text-skill {
-  font-weight: 600;
-  color: var(--foreground);
-  text-transform: capitalize;
-}
-
-.orders-stock-text-muted {
-  color: var(--muted-foreground);
-}
-
-.orders-stock-text-bold {
-  font-weight: 600;
-  color: var(--secondary-foreground);
-}
-
-/* Points selector */
+/* Selector de puntos */
 .orders-points-container {
   display: flex;
   align-items: center;
@@ -205,57 +168,7 @@
   color: var(--foreground);
 }
 
-.orders-progress-wrapper {
-  margin-top: 0.75rem;
-  height: 0.5rem;
-  background-color: var(--muted);
-  border-radius: 9999px;
-  overflow: hidden;
-}
-
-.orders-progress-bar {
-  height: 100%;
-  background-color: var(--primary);
-  border-radius: 9999px;
-  transition: width 0.3s;
-}
-
-/* Order summary */
-.orders-summary {
-  border-radius: 1rem;
-  border: 1px solid var(--border);
-  background-color: rgba(240, 240, 240, 0.3);
-  padding: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.orders-summary-left {
-  display: flex;
-  flex-direction: column;
-}
-
-.orders-summary-label {
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 0.125rem;
-}
-
-.orders-summary-value {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--foreground);
-  text-transform: capitalize;
-}
-
-.orders-summary-right {
-  text-align: right;
-}
-
-/* Submit button */
+/* Boton de enviar */
 .orders-submit-button {
   width: 100%;
   padding: 0.75rem;

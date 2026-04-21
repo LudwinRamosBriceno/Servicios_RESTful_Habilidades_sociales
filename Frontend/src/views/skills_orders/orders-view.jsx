@@ -1,30 +1,38 @@
 import { useState, useEffect } from 'react'
-import { ShoppingBag, Minus, Plus, AlertCircle } from 'lucide-react'
+import { ShoppingBag, Minus, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import './orders-view.css'
 
-export function OrdersView({ skills, preSelectedSkill, onPlaceOrder, addToast }) {
-  const [selectedSkill, setSelectedSkill] = useState(preSelectedSkill || '')
+// Componente de vista para realizar pedidos de habilidades.
+export function OrdersView({ skills, preSelectedSkillId, onPlaceOrder, addToast }) {
+  const [selectedSkillId, setSelectedSkillId] = useState(preSelectedSkillId || '')
   const [points, setPoints] = useState(1)
 
+  // Si desde el catálogo se preselecciona una habilidad, actualizar el estado local para reflejarlo.
   useEffect(() => {
-    if (preSelectedSkill) {
-      setSelectedSkill(preSelectedSkill)
+    if (preSelectedSkillId) {
+      setSelectedSkillId(preSelectedSkillId)
       setPoints(1)
     }
-  }, [preSelectedSkill])
+  }, [preSelectedSkillId])
 
-  const skill = skills.find((s) => s.name === selectedSkill)
+  // Obtener la habilidad seleccionada para determinar el stock disponible.
+  const skill = skills.find((s) => s.id === selectedSkillId)
+
+  // El máximo de puntos que se pueden ordenar es el stock disponible de la habilidad seleccionada.
   const maxPoints = skill?.stock ?? 0
 
-  const handleSkillChange = (name) => {
-    setSelectedSkill(name)
+  // Manejar el cambio de habilidad seleccionada. Al cambiar, resetear los puntos a 1.
+  const handleSkillChange = (skillId) => {
+    setSelectedSkillId(skillId)
     setPoints(1)
   }
 
+  // Manejar incremento y decremento de puntos, asegurando que se mantengan dentro de los límites permitidos.
   const handleDecrement = () => setPoints((p) => Math.max(1, p - 1))
   const handleIncrement = () => setPoints((p) => Math.min(maxPoints, p + 1))
 
+  // Validar el input de puntos (que sea un número y esté dentro de los límites permitidos).
   const handleInputChange = (e) => {
     const val = Number(e.target.value)
     if (!isNaN(val)) {
@@ -32,65 +40,77 @@ export function OrdersView({ skills, preSelectedSkill, onPlaceOrder, addToast })
     }
   }
 
-  const handleSubmit = (e) => {
+  // Validar el formulario antes de enviar el pedido.
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!selectedSkill) {
-      addToast('error', 'Please select a skill before ordering.')
+    if (!selectedSkillId) {
+      addToast('error', 'Por favor, selecciona una habilidad para ordenar.')
       return
     }
     if (!skill || skill.stock === 0) {
-      addToast('error', 'This skill is out of stock.')
+      addToast('error', 'Esta habilidad está fuera de stock.')
       return
     }
     if (points < 1 || points > skill.stock) {
-      addToast('error', `Please enter a value between 1 and ${skill.stock}.`)
+      addToast('error', `Por favor, introduce un valor entre 1 y ${skill.stock}.`)
       return
     }
-    onPlaceOrder(selectedSkill, points)
-    addToast('success', `Order placed! You acquired ${points} point${points > 1 ? 's' : ''} of ${selectedSkill}.`)
-    setPoints(1)
+    try {
+      await onPlaceOrder(selectedSkillId, points)
+      addToast('success', `Pedido realizado! Has adquirido ${points} punto${points > 1 ? 's' : ''} de ${skill.name}.`)
+      setPoints(1)
+    } catch {
+      // El manejo de errores se centraliza en App.
+    }
   }
 
+  // Separar las habilidades disponibles de las que no lo están.
   const availableSkills = skills.filter((s) => s.stock > 0)
   const unavailableSkills = skills.filter((s) => s.stock === 0)
 
   return (
     <main className="orders-main">
-      {/* Header */}
+      
+      {/* Encabezado */}
       <div className="orders-header">
         <div className="orders-header-title-row">
-          <ShoppingBag className="w-5 h-5" style={{ color: '#6B3A4F' }} />
-          <h2 className="orders-header-title">Place an Order</h2>
+          <h2 className="orders-header-title">Realizar un pedido</h2>
         </div>
         <p className="orders-header-subtitle">
-          Select a skill and the number of points you&apos;d like to acquire.
+          Selecciona una habilidad y la cantidad de puntos que deseas adquirir.
         </p>
       </div>
 
-      {/* Form Card */}
+      {/* Formulario de pedido */}
       <section className="orders-form-card">
         <form onSubmit={handleSubmit} className="orders-form" noValidate>
-          {/* Skill Selector */}
+          
+          {/* Seleccionar habilidad */}
           <div>
+
             <label className="orders-field-label">
-              Select Skill <span className="orders-field-required">*</span>
+              Seleccionar habilidad <span className="orders-field-required">*</span>
             </label>
+            
             <div className="orders-skill-grid">
-              {availableSkills.map((s) => (
+              {// Habilidades disponibles para ordenar
+              availableSkills.map((s) => (
                 <button
                   type="button"
-                  key={s.name}
-                  onClick={() => handleSkillChange(s.name)}
-                  className={cn('orders-skill-button orders-skill-button-available', selectedSkill === s.name && 'orders-skill-button-selected')}
-                  style={selectedSkill === s.name ? { color: '#6B3A4F' } : {}}
+                  key={s.id}
+                  onClick={() => handleSkillChange(s.id)}
+                  className={cn('orders-skill-button orders-skill-button-available', selectedSkillId === s.id && 'orders-skill-button-selected')}
+                  style={selectedSkillId === s.id ? { color: '#6B3A4F' } : {}}
                 >
                   {s.name}
                 </button>
-              ))}
-              {unavailableSkills.map((s) => (
+              ))} 
+              
+              {// Habilidades no disponibles (sin stock)
+              unavailableSkills.map((s) => (
                 <button
                   type="button"
-                  key={s.name}
+                  key={s.id}
                   disabled
                   className="orders-skill-button orders-skill-button-unavailable"
                   title="Out of stock"
@@ -99,100 +119,70 @@ export function OrdersView({ skills, preSelectedSkill, onPlaceOrder, addToast })
                 </button>
               ))}
             </div>
+
           </div>
 
-          {/* Stock Info */}
-          {selectedSkill && skill && (
-            <div className="orders-stock-info">
-              <AlertCircle className="orders-stock-icon" style={{ color: '#2A5F7A' }} />
-              <div className="orders-stock-text">
-                <span className="orders-stock-text-skill">{skill.name}</span>
-                <span className="orders-stock-text-muted"> has </span>
-                <span className="orders-stock-text-bold">{skill.stock} point{skill.stock !== 1 ? 's' : ''}</span>
-                <span className="orders-stock-text-muted"> available in stock.</span>
-              </div>
-            </div>
-          )}
 
-          {/* Points Selector */}
+          {/* Selector de puntos */}
           <div>
+            
             <label className="orders-field-label">
-              Number of Points <span className="orders-field-required">*</span>
+              Cantidad de Puntos <span className="orders-field-required">*</span>
             </label>
+
             <div className="orders-points-container">
+              
+              {/* Botone de decrementar puntos */}
               <button
                 type="button"
                 onClick={handleDecrement}
-                disabled={!selectedSkill || points <= 1}
+                disabled={!selectedSkillId || points <= 1}
                 className="orders-points-button"
-                aria-label="Decrease points"
               >
                 <Minus className="w-4 h-4" />
               </button>
-              <input
+
+              {/* Input para ingresar cantidad de puntos */}
+              <input 
                 type="number"
                 value={points}
                 onChange={handleInputChange}
                 min={1}
                 max={maxPoints}
-                disabled={!selectedSkill}
+                disabled={!selectedSkillId}
                 className="orders-points-input"
-                aria-label="Number of points"
               />
+
+              {/* Botón de incrementar puntos */}
               <button
                 type="button"
                 onClick={handleIncrement}
-                disabled={!selectedSkill || points >= maxPoints}
+                disabled={!selectedSkillId || points >= maxPoints}
                 className="orders-points-button"
-                aria-label="Increase points"
               >
                 <Plus className="w-4 h-4" />
               </button>
-              {selectedSkill && (
+
+              {/* Indicador de puntos disponibles para la habilidad seleccionada */}
+              {selectedSkillId && (
                 <span className="orders-points-hint">
-                  of <span className="orders-points-hint-bold">{maxPoints}</span> available
+                  de <span className="orders-points-hint-bold">{maxPoints}</span> disponibles
                 </span>
               )}
+
             </div>
-            {selectedSkill && maxPoints > 0 && (
-              <div className="orders-progress-wrapper">
-                <div
-                  className="orders-progress-bar"
-                  style={{ width: `${(points / maxPoints) * 100}%` }}
-                  role="progressbar"
-                  aria-valuenow={points}
-                  aria-valuemin={1}
-                  aria-valuemax={maxPoints}
-                />
-              </div>
-            )}
           </div>
 
-          {/* Order Summary */}
-          {selectedSkill && skill && (
-            <div className="orders-summary">
-              <div className="orders-summary-left">
-                <p className="orders-summary-label">Order Summary</p>
-                <p className="orders-summary-value">
-                  {points} pt{points !== 1 ? 's' : ''} of {skill.name}
-                </p>
-              </div>
-              <div className="orders-summary-right">
-                <p className="orders-summary-label">Remaining After</p>
-                <p className="orders-summary-value">{skill.stock - points} pts</p>
-              </div>
-            </div>
-          )}
-
-          {/* Submit */}
+          {/* Botón de enviar pedido */}
           <button
             type="submit"
-            disabled={!selectedSkill || !skill || skill.stock === 0}
+            disabled={!selectedSkillId || !skill || skill.stock === 0}
             className="orders-submit-button"
             style={{ color: '#6B3A4F' }}
           >
-            Place Order
+            Realizar pedido
           </button>
+
         </form>
       </section>
     </main>

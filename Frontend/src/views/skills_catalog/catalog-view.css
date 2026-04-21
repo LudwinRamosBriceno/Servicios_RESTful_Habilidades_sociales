@@ -1,4 +1,4 @@
-/* Catalog view styling */
+/* Estilos para la vista del catálogo de habilidades */
 .catalog-main {
   max-width: 56rem;
   margin-left: auto;
@@ -45,70 +45,12 @@
   color: var(--muted-foreground);
 }
 
-.catalog-stats {
-  display: flex;
-  gap: 1rem;
-}
-
-@media (min-width: 640px) {
-  .catalog-stats {
-    margin-left: auto;
-  }
-}
-
-.catalog-stat-card {
-  border-radius: 1rem;
-  padding: 0.75rem 1.25rem;
-  text-align: center;
-}
-
-.catalog-stat-card-total {
-  background-color: var(--secondary);
-}
-
-.catalog-stat-card-instock {
-  background-color: rgba(168, 230, 207, 0.3);
-}
-
-.catalog-stat-value {
-  font-size: 1.25rem;
-  font-weight: 700;
-}
-
-.catalog-stat-value-total {
-  color: var(--secondary-foreground);
-}
-
-.catalog-stat-value-instock {
-  color: var(--success-foreground);
-}
-
-.catalog-stat-label {
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
 .catalog-section {
   background-color: var(--card);
   border-radius: 1.5rem;
   border: 1px solid var(--border);
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   overflow: hidden;
-}
-
-.catalog-section-header {
-  padding: 1.25rem 2rem;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.catalog-section-title {
-  font-weight: 600;
-  color: var(--foreground);
 }
 
 .catalog-table-wrapper {
@@ -153,23 +95,13 @@
   opacity: 0.7;
 }
 
-.catalog-table-row-alt {
-  background-color: rgba(240, 240, 240, 0.1);
-}
-
 .catalog-table-cell {
   padding: 1rem 2rem;
-}
-
-.catalog-table-cell-index {
-  color: var(--muted-foreground);
-  font-size: 0.75rem;
 }
 
 .catalog-table-skill {
   padding: 1rem;
   font-weight: 500;
-  color: var(--foreground);
   text-transform: capitalize;
 }
 
@@ -208,7 +140,7 @@
   cursor: not-allowed;
 }
 
-/* Stock Badge */
+/* Stock */
 .stock-badge {
   display: inline-flex;
   align-items: center;
