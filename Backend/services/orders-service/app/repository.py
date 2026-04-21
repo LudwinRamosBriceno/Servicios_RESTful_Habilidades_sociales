@@ -37,7 +37,7 @@ class OrderRepository:
                     product_id=order.product_id,
                     quantity=order.quantity,
                     status=order.status.value,
-                    xp_gained=order.xp_gained,
+                    skill_points=order.skill_points,
                     created_at=order.created_at,
                 )
             )
@@ -91,6 +91,6 @@ class OrderRepository:
             product_id=orm_order.product_id,
             quantity=orm_order.quantity,
             status=OrderStatus(orm_order.status),
-            xp_gained=orm_order.xp_gained,
+            skill_points=orm_order.skill_points,
             created_at=orm_order.created_at,
         )

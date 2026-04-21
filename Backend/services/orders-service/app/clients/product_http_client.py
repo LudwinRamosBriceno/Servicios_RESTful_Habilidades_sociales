@@ -39,7 +39,6 @@ class ProductHttpClient:
             id=payload["id"],
             name=payload["name"],
             stock=payload["stock"],
-            xpPoints=payload["xpPoints"],
         )
 
     def discount_stock(self, product_id: str, quantity: int) -> None:
