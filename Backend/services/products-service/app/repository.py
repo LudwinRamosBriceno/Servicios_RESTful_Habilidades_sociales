@@ -2,7 +2,7 @@ from typing import Dict, List
 
 from .models import Product
 
-
+# Ejemplo de base de datos para productos
 class ProductRepository:
     def __init__(self) -> None:
         self._products: Dict[str, Product] = {}
