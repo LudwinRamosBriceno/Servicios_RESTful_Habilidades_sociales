@@ -5,20 +5,24 @@ from fastapi import HTTPException, status
 from .models import CreateProductRequest, Product, ProductResponse, UpdateProductRequest, UpdateStockRequest
 from .repository import ProductRepository
 
+# Servicio de productos con logica de negocio
 class ProductService:
     def __init__(self, repository: ProductRepository) -> None:
-        self._repository = repository
-        self._seed_products()
+        self._repository = repository # instancia del repositorio para acceder a la base de datos
+        self._seed_products() # Se colocan en la base de datos productos de prueba al iniciar el servicio
 
+    # Metodo para listar todos los productos
     def list_products(self) -> list[ProductResponse]:
         return [self._to_response(product) for product in self._repository.find_all()]
 
+    # Metodo para obtener un producto por su id
     def get_product(self, product_id: str) -> ProductResponse:
         product = self._repository.find_by_id(product_id)
         if not product:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
         return self._to_response(product)
 
+    # Metodo para crear un nuevo producto
     def create_product(self, payload: CreateProductRequest) -> ProductResponse:
         product_id = payload.id or f"hab_{uuid.uuid4().hex[:6]}"
         product = Product(
@@ -31,6 +35,7 @@ class ProductService:
         self._repository.save(product)
         return self._to_response(product)
 
+    # Metodo para actualizar un producto existente
     def update_product(self, product_id: str, payload: UpdateProductRequest) -> ProductResponse:
         product = self._repository.find_by_id(product_id)
         if not product:
@@ -48,6 +53,7 @@ class ProductService:
         self._repository.save(product)
         return self._to_response(product)
 
+    # Metodo para eliminar un producto por su id
     def delete_product(self, product_id: str) -> None:
         product = self._repository.find_by_id(product_id)
         if not product:
@@ -55,6 +61,7 @@ class ProductService:
         
         self._repository.delete(product_id)
 
+    # Metodo para descontar stock de un producto
     def discount_stock(self, product_id: str, payload: UpdateStockRequest) -> ProductResponse:
         product = self._repository.find_by_id(product_id)
         if not product:
@@ -68,6 +75,7 @@ class ProductService:
         self._repository.save(product)
         return self._to_response(product)
 
+    # Metodo para convertir un objeto de producto a un objeto de respuesta (para el cliente)
     @staticmethod
     def _to_response(product: Product) -> ProductResponse:
         return ProductResponse(
@@ -78,6 +86,7 @@ class ProductService:
             active=product.active,
         )
 
+    # Metodo para insertar productos de prueba en la base de datos al inciar el servicio
     def _seed_products(self) -> None:
         if self._repository.find_all():
             return
@@ -100,5 +109,6 @@ class ProductService:
             Product(id="hab_015", name="iniciativa", description="Actuar de forma proactiva", stock=85, active=True),
         ]
 
+        # Se insertan los productos de prueba en la base de datos
         for product in seed_data:
             self._repository.save(product)

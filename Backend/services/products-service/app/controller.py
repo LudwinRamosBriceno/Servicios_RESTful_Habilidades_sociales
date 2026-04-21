@@ -4,6 +4,7 @@ from .models import CreateProductRequest, UpdateProductRequest, UpdateStockReque
 from .repository import ProductRepository
 from .service import ProductService
 
+# Se define el router con la url base del servicio
 router = APIRouter(prefix="/products", tags=["products"])
 service = ProductService(ProductRepository())
 
