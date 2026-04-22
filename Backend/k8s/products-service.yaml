@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: products-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: products-service
+  template:
+    metadata:
+      labels:
+        app: products-service
+    spec:
+      initContainers:
+        - name: wait-for-products-db
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - until nc -z products-db 5432; do echo "Esperando products-db:5432..."; sleep 2; done
+      containers:
+        - name: products-service
+          image: products-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8002
+          env:
+            - name: DATABASE_URL
+              value: postgresql+psycopg2://products_user:products_pass@products-db:5432/products_db
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: products-service
+spec:
+  selector:
+    app: products-service
+  ports:
+    - protocol: TCP
+      port: 8002
+      targetPort: 8002
+  type: ClusterIP

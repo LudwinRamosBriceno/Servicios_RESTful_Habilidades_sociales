@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: users-db-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: standard
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: users-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: users-db
+  template:
+    metadata:
+      labels:
+        app: users-db
+    spec:
+      containers:
+        - name: users-db
+          image: postgres:18
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: users_db
+            - name: POSTGRES_USER
+              value: users_user
+            - name: POSTGRES_PASSWORD
+              value: users_pass
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: users-db-storage
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: users-db-storage
+          persistentVolumeClaim:
+            claimName: users-db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: users-db
+spec:
+  selector:
+    app: users-db
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+  type: ClusterIP

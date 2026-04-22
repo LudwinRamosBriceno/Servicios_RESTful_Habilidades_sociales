@@ -1,0 +1,218 @@
+/* Estilos de la vista de selección y registro */
+.auth-main {
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem clamp(1rem, 4vw, 2.5rem);
+}
+
+.auth-container {
+  width: 100%;
+  max-width: min(92vw, 68rem);
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.auth-header-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 9999px;
+  background-color: var(--primary);
+  margin-bottom: 1rem;
+}
+
+.auth-header-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--foreground);
+  text-wrap: balance;
+}
+
+.auth-header-subtitle {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  margin-top: 0.25rem;
+}
+
+.auth-form-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+} 
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 28rem;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.auth-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.auth-input {
+  width: 100%;
+  padding: 0.625rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background-color: var(--background);
+  color: var(--foreground);
+  font-size: 0.875rem;
+  transition: all 0.15s;
+  box-sizing: border-box;
+}
+
+.auth-input::placeholder {
+  color: var(--muted-foreground);
+}
+
+.auth-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.auth-submit-button {
+  width: 100%;
+  padding: 0.625rem;
+  border-radius: 0.75rem;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+  margin-top: 0.25rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  border: none;
+  cursor: pointer;
+}
+
+.auth-submit-button:hover {
+  filter: brightness(0.95);
+}
+
+.auth-footer {
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  margin-top: 1.5rem;
+}
+
+.auth-footer-link {
+  font-weight: 500;
+  color: var(--foreground);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.auth-footer-link:hover {
+  text-decoration: underline;
+}
+
+/* Selector de usuarios */
+.auth-user-grid {
+  padding: 0.5rem 0.75rem 0.85rem;
+  overflow-x: auto;
+  scroll-padding-inline: 0.75rem;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.auth-user-track {
+  display: flex;
+  gap: 1rem;
+  width: max-content;
+  min-width: 100%;
+  justify-content: center;
+}
+
+.auth-empty-users {
+  width: 100%;
+  text-align: center;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  padding: 1rem 0;
+}
+
+.auth-user-grid::-webkit-scrollbar {
+  height: 4px;
+}
+
+.auth-user-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.auth-user-grid::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: 9999px;
+}
+
+.auth-user-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.5rem 1.25rem;
+  min-width: 7.5rem;
+  border-radius: 1.25rem;
+  border: 2px solid var(--border);
+  background-color: var(--background);
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+  flex-shrink: 0;
+}
+
+@media (min-width: 900px) {
+  .auth-container {
+    max-width: min(94vw, 74rem);
+  }
+}
+
+.auth-user-card:hover {
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07);
+  transform: translateY(-2px);
+}
+
+.auth-user-avatar {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-user-initials {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #2D2D2D;
+  letter-spacing: 0.02em;
+}
+
+.auth-user-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
