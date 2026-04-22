@@ -31,7 +31,7 @@ class NotificationHttpClient:
         try:
             response = httpx.post(f"{self._base_url}/notifications", json=body, timeout=self._timeout)
         except httpx.RequestError as exc:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Notifications service unavailable: {exc}") from exc
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Servicio de notificaciones no disponible: {exc}") from exc
 
         if response.status_code >= 400:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Notifications service error")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error del servicio de notificaciones")

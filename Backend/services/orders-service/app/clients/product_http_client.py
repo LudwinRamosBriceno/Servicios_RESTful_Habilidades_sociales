@@ -27,12 +27,12 @@ class ProductHttpClient:
         try:
             response = httpx.get(f"{self._base_url}/products/{product_id}", timeout=self._timeout)
         except httpx.RequestError as exc:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Products service unavailable: {exc}") from exc
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Servicio de productos no disponible: {exc}") from exc
 
         if response.status_code == status.HTTP_404_NOT_FOUND:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
         if response.status_code >= 400:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Products service error")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error del servicio de productos")
 
         payload = response.json()
         return ProductDTO(
@@ -50,11 +50,11 @@ class ProductHttpClient:
         try:
             response = httpx.put(f"{self._base_url}/products/{product_id}/stock", json=body, timeout=self._timeout)
         except httpx.RequestError as exc:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Products service unavailable: {exc}") from exc
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Servicio de productos no disponible: {exc}") from exc
 
         if response.status_code == status.HTTP_404_NOT_FOUND:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
         if response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Insufficient stock")
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Stock insuficiente")
         if response.status_code >= 400:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Products service error")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error del servicio de productos")

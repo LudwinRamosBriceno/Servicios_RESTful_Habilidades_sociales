@@ -56,8 +56,11 @@ export function OrdersView({ skills, preSelectedSkillId, onPlaceOrder, addToast 
       return
     }
     try {
-      await onPlaceOrder(selectedSkillId, points)
-      addToast('success', `Pedido realizado! Has adquirido ${points} punto${points > 1 ? 's' : ''} de ${skill.name}.`)
+      const result = await onPlaceOrder(selectedSkillId, points)
+      const successMessage =
+        result?.message ||
+        `Pedido realizado! Has adquirido ${points} punto${points > 1 ? 's' : ''} de ${skill.name}.`
+      addToast('success', successMessage)
       setPoints(1)
     } catch {
       // El manejo de errores se centraliza en App.
@@ -70,7 +73,7 @@ export function OrdersView({ skills, preSelectedSkillId, onPlaceOrder, addToast 
 
   return (
     <main className="orders-main">
-      
+
       {/* Encabezado */}
       <div className="orders-header">
         <div className="orders-header-title-row">
@@ -84,40 +87,40 @@ export function OrdersView({ skills, preSelectedSkillId, onPlaceOrder, addToast 
       {/* Formulario de pedido */}
       <section className="orders-form-card">
         <form onSubmit={handleSubmit} className="orders-form" noValidate>
-          
+
           {/* Seleccionar habilidad */}
           <div>
 
             <label className="orders-field-label">
               Seleccionar habilidad <span className="orders-field-required">*</span>
             </label>
-            
+
             <div className="orders-skill-grid">
               {// Habilidades disponibles para ordenar
-              availableSkills.map((s) => (
-                <button
-                  type="button"
-                  key={s.id}
-                  onClick={() => handleSkillChange(s.id)}
-                  className={cn('orders-skill-button orders-skill-button-available', selectedSkillId === s.id && 'orders-skill-button-selected')}
-                  style={selectedSkillId === s.id ? { color: '#6B3A4F' } : {}}
-                >
-                  {s.name}
-                </button>
-              ))} 
-              
+                availableSkills.map((s) => (
+                  <button
+                    type="button"
+                    key={s.id}
+                    onClick={() => handleSkillChange(s.id)}
+                    className={cn('orders-skill-button orders-skill-button-available', selectedSkillId === s.id && 'orders-skill-button-selected')}
+                    style={selectedSkillId === s.id ? { color: '#6B3A4F' } : {}}
+                  >
+                    {s.name}
+                  </button>
+                ))}
+
               {// Habilidades no disponibles (sin stock)
-              unavailableSkills.map((s) => (
-                <button
-                  type="button"
-                  key={s.id}
-                  disabled
-                  className="orders-skill-button orders-skill-button-unavailable"
-                  title="Out of stock"
-                >
-                  {s.name}
-                </button>
-              ))}
+                unavailableSkills.map((s) => (
+                  <button
+                    type="button"
+                    key={s.id}
+                    disabled
+                    className="orders-skill-button orders-skill-button-unavailable"
+                    title="Out of stock"
+                  >
+                    {s.name}
+                  </button>
+                ))}
             </div>
 
           </div>
@@ -125,13 +128,13 @@ export function OrdersView({ skills, preSelectedSkillId, onPlaceOrder, addToast 
 
           {/* Selector de puntos */}
           <div>
-            
+
             <label className="orders-field-label">
               Cantidad de Puntos <span className="orders-field-required">*</span>
             </label>
 
             <div className="orders-points-container">
-              
+
               {/* Botone de decrementar puntos */}
               <button
                 type="button"
@@ -143,7 +146,7 @@ export function OrdersView({ skills, preSelectedSkillId, onPlaceOrder, addToast 
               </button>
 
               {/* Input para ingresar cantidad de puntos */}
-              <input 
+              <input
                 type="number"
                 value={points}
                 onChange={handleInputChange}

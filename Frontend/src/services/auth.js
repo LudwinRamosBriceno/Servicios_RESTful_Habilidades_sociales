@@ -8,7 +8,7 @@ export function getUsers() {
 // Función para registrar un nuevo usuario
 export function registerUser(name, email, password) { 
     if (!name || !email || !password) {
-        throw new Error('[Frontend] Error: Todos los campos son obligatorios')
+        throw new Error('Error: Todos los campos son obligatorios')
     }
     return post('/users', { name, email, password })
 }

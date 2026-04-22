@@ -12,6 +12,13 @@ spec:
       labels:
         app: products-service
     spec:
+      initContainers:
+        - name: wait-for-products-db
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - until nc -z products-db 5432; do echo "Esperando products-db:5432..."; sleep 2; done
       containers:
         - name: products-service
           image: products-service:latest

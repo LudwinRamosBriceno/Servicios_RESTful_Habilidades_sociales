@@ -1,9 +1,14 @@
 import uuid
+import logging
 
 from fastapi import HTTPException, status
+from sqlalchemy.exc import ProgrammingError
 
 from .models import CreateProductRequest, Product, ProductResponse, UpdateProductRequest, UpdateStockRequest
 from .repository import ProductRepository
+
+
+logger = logging.getLogger(__name__)
 
 class ProductService:
     def __init__(self, repository: ProductRepository) -> None:
@@ -79,7 +84,12 @@ class ProductService:
         )
 
     def _seed_products(self) -> None:
-        if self._repository.find_all():
+        try:
+            if self._repository.find_all():
+                return
+        except ProgrammingError:
+            # If schema is missing, keep the service alive and migrate DB first.
+            logger.warning("Products table is missing. Skipping seed until migrations are applied.")
             return
 
         seed_data = [

@@ -50,13 +50,13 @@ class OrderService:
             tuple[OrderResult, int]: El resultado de la creación de la orden y el código de estado HTTP correspondiente.
         """
         if payload.quantity <= 0:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Quantity must be > 0")
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="La cantidad debe ser mayor que 0")
 
         self._user_client.get_user(payload.userId)
         product = self._product_client.get_product(payload.productId)
 
         if product.stock < payload.quantity:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Insufficient stock")
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Stock insuficiente")
 
         self._product_client.discount_stock(payload.productId, payload.quantity)
 
@@ -76,7 +76,7 @@ class OrderService:
         self._notification_client.send_order_completed(order.id, payload.userId, product.name, skill_points)
 
         http_status = status.HTTP_202_ACCEPTED if already_owned else status.HTTP_201_CREATED
-        message = "Skill already owned, points added" if already_owned else "Order completed successfully"
+        message = "La habilidad ya estaba asignada, se sumaron puntos" if already_owned else "Orden completada exitosamente"
 
         return self._to_result(order, message), http_status
 
@@ -91,8 +91,8 @@ class OrderService:
         """
         order = self._repository.find_by_id(order_id)
         if not order:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
-        return self._to_result(order, "Order fetched")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Orden no encontrada")
+        return self._to_result(order, "Orden obtenida")
 
     def get_orders_by_user(self, user_id: str) -> list[OrderResult]:
         """
@@ -103,7 +103,7 @@ class OrderService:
         Retorna:
             list[OrderResult]: Una lista de resultados de las órdenes asociadas al usuario.
         """
-        return [self._to_result(order, "Order fetched") for order in self._repository.find_by_user_id(user_id)]
+        return [self._to_result(order, "Orden obtenida") for order in self._repository.find_by_user_id(user_id)]
 
     @staticmethod
     def _to_result(order: Order, message: str) -> OrderResult:

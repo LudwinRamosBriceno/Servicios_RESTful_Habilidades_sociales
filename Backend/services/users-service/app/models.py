@@ -51,6 +51,11 @@ class UserNameResponse(BaseModel):
     name: str
 
 
+class UserListItemResponse(BaseModel):
+    id: str
+    name: str
+
+
 class AddSkillResponse(BaseModel):
     userId: str
     skillId: str

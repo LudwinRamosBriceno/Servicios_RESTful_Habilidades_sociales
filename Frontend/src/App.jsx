@@ -105,32 +105,33 @@ function App() {
   }
 
   // Controlar la colocación de una orden desde la vista de órdenes
+
   const handlePlaceOrder = async (productId, quantity) => {
+
     try {
       if (!user?.id) {
         console.error('Intento de realizar pedido sin usuario autenticado.')
         throw new Error('No hay usuario autenticado para realizar el pedido.')
       }
-
-      await orderSkill(user.id, productId, quantity)
-
+      const orderResponse = await orderSkill(user.id, productId, quantity)
       // Refrescar información desde backend para mantener datos consistentes.
       const [skillsResponse, userResponse] = await Promise.all([getAllSkills(), getUserById(user.id)])
       setSkills(skillsResponse)
       setUser(userResponse)
-
       // Limpiar la habilidad preseleccionada después de colocar la orden
       setPreSelectedSkillId(undefined)
+      return orderResponse
     } catch (error) {
       console.error('Error al realizar el pedido:', error)
       addToast('error', error.message || 'No se pudo realizar el pedido.')
       throw error
     }
+
   }
 
   return (
     <div className="min-h-screen bg-background">
-      
+
       {/* Barra de navegación*/}
       <Navbar
         currentView={currentView}
@@ -147,19 +148,19 @@ function App() {
         <AuthView users={users} onLogin={handleLogin} onRegister={handleRegister} addToast={addToast} />
 
       ) : currentView === 'profile' && user ? (
-        
+
         // Mostrar la vista de perfil si el usuario está autenticado y ha seleccionado la vista de perfil
         <ProfileView
           user={user}
         />
 
       ) : currentView === 'catalog' ? (
-        
+
         // Mostrar la vista de catálogo si el usuario está autenticado y ha seleccionado la vista de catálogo
         <CatalogView skills={skills} onOrderClick={handleOrderClick} />
 
       ) : currentView === 'orders' ? (
-        
+
         // Mostrar la vista de órdenes si el usuario está autenticado y ha seleccionado la vista de órdenes
         <OrdersView
           skills={skills}
@@ -167,7 +168,7 @@ function App() {
           onPlaceOrder={handlePlaceOrder}
           addToast={addToast}
         />
-        
+
       ) : null}
 
       {/* Contenedor de notificaciones de toast */}

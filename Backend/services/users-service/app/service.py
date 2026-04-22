@@ -3,7 +3,7 @@ import os
 
 from fastapi import HTTPException, status
 
-from .models import AddSkillRequest, AddSkillResponse, CreateUserRequest, UpdateUserRequest, User, UserNameResponse, UserResponse
+from .models import AddSkillRequest, AddSkillResponse, CreateUserRequest, UpdateUserRequest, User, UserListItemResponse, UserResponse
 from .repository import UserRepository
 from .clients.product_http_client import ProductHttpClient
 
@@ -31,11 +31,11 @@ class UserService:
         self._repository.create(user)
         return self._to_response(user)
     
-    def list_users(self) -> list[UserNameResponse]:
+    def list_users(self) -> list[UserListItemResponse]:
         users = self._repository.find_all()
         if not users:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No users found")
-        return [UserNameResponse(name=user.name) for user in users]
+        return [UserListItemResponse(id=user.id, name=user.name) for user in users]
 
     def get_user(self, user_id: str) -> UserResponse:
         user = self._repository.get_by_id(user_id)
