@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orders-service
+  template:
+    metadata:
+      labels:
+        app: orders-service
+    spec:
+      containers:
+        - name: orders-service
+          image: orders-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: USERS_SERVICE_URL
+              value: http://users-service:8001
+            - name: PRODUCTS_SERVICE_URL
+              value: http://products-service:8002
+            - name: NOTIFICATIONS_SERVICE_URL
+              value: http://notifications-service:8003
+            - name: DATABASE_URL
+              value: postgresql+psycopg2://postgres@orders-db:5432/orders_db
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orders-service
+spec:
+  selector:
+    app: orders-service
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+  type: ClusterIP

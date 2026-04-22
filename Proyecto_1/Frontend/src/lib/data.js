@@ -1,0 +1,17 @@
+export const INITIAL_SKILLS = [
+  { name: 'empatía', stock: 42 },
+  { name: 'amistad', stock: 35 },
+  { name: 'liderazgo', stock: 28 },
+  { name: 'creatividad', stock: 50 },
+  { name: 'resiliencia', stock: 0 },
+  { name: 'comunicación', stock: 60 },
+  { name: 'colaboración', stock: 33 },
+  { name: 'astucia', stock: 12 },
+  { name: 'pacience', stock: 0 },
+  { name: 'respeto', stock: 55 },
+  { name: 'confianza', stock: 20 },
+  { name: 'humor', stock: 18 },
+  { name: 'adaptabilidad', stock: 45 },
+  { name: 'escucha activa', stock: 37 },
+  { name: 'iniciativa', stock: 0 },
+]
