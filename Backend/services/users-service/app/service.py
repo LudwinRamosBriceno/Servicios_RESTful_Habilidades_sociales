@@ -23,7 +23,7 @@ class UserService:
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="User name already exists",
+                detail="El nombre de usuario ya existe",
             )
 
         # ID corto con prefijo funcional para facilitar trazabilidad en logs.
@@ -40,21 +40,21 @@ class UserService:
         """Lista de todos los usuarios."""
         users = self._repository.find_all()
         if not users:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No users found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No hay usuarios registrados")
         return [UserListItemResponse(id=user.id, name=user.name) for user in users]
 
     def get_user(self, user_id: str) -> UserResponse:
         """Obtiene un usuario por su ID."""
         user = self._repository.get_by_id(user_id)
         if not user:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
         return self._to_response(user)
 
     def update_user(self, user_id: str, payload: UpdateUserRequest) -> UserResponse:
         """Actualiza campos del usuario de forma parcial (solo si llegan en payload)."""
         user = self._repository.get_by_id(user_id)
         if not user:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
 
         if payload.name is not None:
             # Evita colisiones de nombre con otros usuarios.
@@ -62,7 +62,7 @@ class UserService:
             if existing_user and existing_user.id != user.id:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
-                    detail="User name already exists",
+                    detail="El nombre de usuario ya existe",
                 )
             user.name = payload.name
         if payload.email is not None:
@@ -77,7 +77,7 @@ class UserService:
         """Devuelve las habilidades del usuario con nombre legible."""
         user = self._repository.get_by_id(user_id)
         if not user:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
         # Skills con nombre para facilitar visualizacion en el cliente.
         return {
             "userId": user.id,
@@ -95,7 +95,7 @@ class UserService:
         """Agrega una habilidad o acumula puntos si ya existe en el usuario."""
         user = self._repository.get_by_id(user_id)
         if not user:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
 
         already_owned = payload.skillId in user.skills
         if already_owned:
@@ -128,6 +128,6 @@ class UserService:
         )
 
     def _resolve_skill_name(self, skill_id: str) -> str:
-        """Busca el nombre en products-service y, si no existe, devuelve 'Unknown skill'."""
+        """Busca el nombre en products-service y, si no existe, devuelve 'Skill desconocida'."""
         skill_name = self._product_client.get_product_name(skill_id)
-        return skill_name if skill_name else "Unknown skill"
+        return skill_name if skill_name else "Skill desconocida"
