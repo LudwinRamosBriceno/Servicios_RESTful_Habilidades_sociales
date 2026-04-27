@@ -3,22 +3,36 @@ import { Eye, EyeOff, Sparkles } from 'lucide-react'
 import './auth-view.css'
 
 // Componente de selección y registro de usuarios.
-export function AuthView({ users = [], onLogin, onRegister, addToast }) {
-  const [mode, setMode] = useState('select')
-  const [form, setForm] = useState({ name: '', email: ''})
-  const usersList = Array.isArray(users) ? users : []
+export function AuthView({ onLogin, onRegister, addToast }) {
+  const [mode, setMode] = useState('login')
+  const [showPassword, setShowPassword] = useState(false)
+  const [form, setForm] = useState({ email: '', password: '', name: '', confirmPassword: '' })
 
-  // Generar mensaje de bienvenida al ingresar.
-  const handleUserSelect = async (user) => {
+  // Manejar inicio de sesión visual.
+  const handleLoginSubmit = async (e) => {
+    e.preventDefault()
+    if (!form.email) {
+      addToast('error', 'Por favor, ingresa tu correo electrónico.')
+      return
+    }
+    if (!form.password) {
+      addToast('error', 'Por favor, ingresa tu contraseña.')
+      return
+    }
     try {
-      await onLogin(user)
+      const visualUser = {
+        name: form.email.split('@')[0] || 'usuario',
+        email: form.email,
+        skills: [],
+      }
+      await onLogin(visualUser)
     } catch {
       // El manejo de errores se centraliza en App.
     }
   }
 
   // Validar campos de registro
-  const handleSubmit = async (e) => {
+  const handleRegisterSubmit = async (e) => {
     e.preventDefault()
     if (!form.email) {
       addToast('error', 'Por favor, completa todos los campos requeridos.')
@@ -28,8 +42,16 @@ export function AuthView({ users = [], onLogin, onRegister, addToast }) {
       addToast('error', 'Por favor, ingresa tu nombre completo.')
       return
     }
+    if (!form.password) {
+      addToast('error', 'Por favor, ingresa tu contraseña.')
+      return
+    }
+    if (form.password !== form.confirmPassword) {
+      addToast('error', 'Las contraseñas no coinciden.')
+      return
+    }
     try {
-      await onRegister(form.name, form.email)
+      await onRegister(form.name, form.email, form.password)
     } catch {
       // El manejo de errores se centraliza en App.
     }
@@ -51,43 +73,72 @@ export function AuthView({ users = [], onLogin, onRegister, addToast }) {
             <Sparkles className="w-7 h-7 text-primary-foreground" style={{ color: '#6B3A4F' }} />
           </div>
           <h1 className="auth-header-title">
-            {mode === 'select' ? '¿Quien está usando SkillsMarket?' : 'Crea tu cuenta'}
+            {mode === 'login' ? 'Inicia sesión en SkillsMarket' : 'Crea tu cuenta'}
           </h1>
           <p className="auth-header-subtitle">
-            {mode === 'select'
-              ? 'Elige tu perfil para continuar'
+            {mode === 'login'
+              ? 'Ingresa con tu correo y contraseña para continuar'
               : 'Únete a SkillsMarket y comienza a mejorar tus habilidades sociales hoy mismo'}
           </p>
         </div>
 
-        {/* Selector de usuario / Formulario de registro */}
-        {mode === 'select' ? (
-          
-          /* Selector de usuario */
-          <div className="auth-user-grid" role="list">
-            <div className="auth-user-track">
-              {usersList.length === 0 ? (
-                // No hay usuarios registrados
-                <p className="auth-empty-users">No hay usuarios registrados.</p>
-              ) : (
-                // Mostrar lista de usuarios registrados para seleccionar
-                usersList.map((user, index) => (
-                  <button key={`${user.id || user.email || user.name}-${index}`} className="auth-user-card" role="listitem" onClick={() => handleUserSelect(user)} >
-                    <div className="auth-user-avatar">
-                      <span className="auth-user-initials">{(user.name || '?').slice(0, 2).toUpperCase()}</span>
-                    </div>
-                    <span className="auth-user-name">{user.name}</span>
-                  </button>
-                ))
-              )}
-            </div>
+        {/* Login / Formulario de registro */}
+        {mode === 'login' ? (
+
+          /* Formulario de inicio de sesión */
+          <div className="auth-form-container">
+            <form onSubmit={handleLoginSubmit} className="auth-form" noValidate>
+              
+              {/* Dirección de email */}
+              <div className="auth-field">
+                <label htmlFor="email" className="auth-label">Correo electrónico</label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="usuario@correo.com"
+                  value={form.email}
+                  onChange={handleChange}
+                  className="auth-input"
+                />
+              </div>
+
+              {/* Contraseña */}
+              <div className="auth-field">
+                <label htmlFor="password" className="auth-label">Contraseña</label>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  value={form.password}
+                  onChange={handleChange}
+                  className="auth-input pr-11"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="auth-password-toggle"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
+              {/* Botón de envío de inicio de sesión */}
+              <button type="submit" className="auth-submit-button" style={{ color: '#6B3A4F' }}>
+                Iniciar sesión
+              </button>
+
+            </form>
           </div>
 
         ) : (
 
           /* Formulario de registro */
           <div className="auth-form-container">
-            <form onSubmit={handleSubmit} className="auth-form" noValidate>
+            <form onSubmit={handleRegisterSubmit} className="auth-form" noValidate>
               
               {/* Nombre completo */}
               <div className="auth-field">
@@ -106,7 +157,7 @@ export function AuthView({ users = [], onLogin, onRegister, addToast }) {
 
               {/* Dirección de email */}
               <div className="auth-field">
-                <label htmlFor="email" className="auth-label">Dirección de email</label>
+                <label htmlFor="email" className="auth-label">Correo electrónico</label>
                 <input
                   id="email"
                   name="email"
@@ -119,6 +170,49 @@ export function AuthView({ users = [], onLogin, onRegister, addToast }) {
                 />
               </div>
 
+              {/* Contraseña */}
+              <div className="auth-field">
+                <label htmlFor="password" className="auth-label">Contraseña</label>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="••••••••"
+                  value={form.password}
+                  onChange={handleChange}
+                  className="auth-input pr-11"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="auth-password-toggle"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
+              {/* Confirmar contraseña */}
+              <div className="auth-field">
+                <label htmlFor="confirmPassword" className="auth-label">Confirmar contraseña</label>
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="••••••••"
+                  value={form.confirmPassword}
+                  onChange={handleChange}
+                  className="auth-input pr-11"
+                />
+                <button type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="auth-password-toggle"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
               <button type="submit" className="auth-submit-button" style={{ color: '#6B3A4F' }}>
                 Crear cuenta
               </button>
@@ -129,12 +223,12 @@ export function AuthView({ users = [], onLogin, onRegister, addToast }) {
 
         {/* Enlace para cambiar entre modos */}
         <p className="auth-footer">
-          {mode === 'select' ? '¿Nuevo aquí?  ' : '¿Ya tienes un perfil? '}
+          {mode === 'login' ? '¿Nuevo aquí?  ' : '¿Ya tienes un perfil? '}
           <button
-            onClick={() => setMode(mode === 'select' ? 'register' : 'select')}
+            onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
             className="auth-footer-link"
           >
-            {mode === 'select' ? 'Registrarse' : 'Seleccionar usuario'}
+            {mode === 'login' ? 'Registrarse' : 'Iniciar sesión'}
           </button>
         </p>
 

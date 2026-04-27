@@ -66,10 +66,10 @@ function App() {
   }
 
   // Controlar el registro del usuario
-  const handleRegister = async (name, email) => {
+  const handleRegister = async (name, email, password) => {
     try {
       // Registrar el usuario y usar la respuesta del backend directamente. (debe cambiar de estado si backend responde ok)
-      const userResponse = await registerUser(name, email, 'default123')
+      const userResponse = await registerUser(name, email, password)
       setUser(userResponse)
       setUsers((prev) => [...prev, userResponse])
       setIsAuthenticated(true)
@@ -105,7 +105,6 @@ function App() {
   }
 
   // Controlar la colocación de una orden desde la vista de órdenes
-
   const handlePlaceOrder = async (productId, quantity) => {
 
     try {
@@ -113,11 +112,14 @@ function App() {
         console.error('Intento de realizar pedido sin usuario autenticado.')
         throw new Error('No hay usuario autenticado para realizar el pedido.')
       }
+
       const orderResponse = await orderSkill(user.id, productId, quantity)
+
       // Refrescar información desde backend para mantener datos consistentes.
       const [skillsResponse, userResponse] = await Promise.all([getAllSkills(), getUserById(user.id)])
       setSkills(skillsResponse)
       setUser(userResponse)
+
       // Limpiar la habilidad preseleccionada después de colocar la orden
       setPreSelectedSkillId(undefined)
       return orderResponse
@@ -145,7 +147,7 @@ function App() {
       {!isAuthenticated || currentView === 'auth' ? (
 
         // Mostrar la vista de autenticación si el usuario no está autenticado
-        <AuthView users={users} onLogin={handleLogin} onRegister={handleRegister} addToast={addToast} />
+        <AuthView onLogin={handleLogin} onRegister={handleRegister} addToast={addToast} />
 
       ) : currentView === 'profile' && user ? (
 
