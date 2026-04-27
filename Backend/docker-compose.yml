@@ -71,6 +71,19 @@ services:
     ports:
       - "8003:8003"
 
+  auth-service:
+    build: ./services/auth-service
+    container_name: auth-service
+    depends_on:
+      - users-service
+    environment:
+      USERS_SERVICE_URL: http://users-service:8001
+      JWT_SECRET_KEY: dev-secret
+      JWT_ISSUER: auth-service
+      JWT_EXPIRES_SECONDS: 3600
+    ports:
+      - "8004:8004"
+
   orders-service:
     build: ./services/orders-service
     container_name: orders-service
@@ -79,11 +92,14 @@ services:
       - users-service
       - products-service
       - notifications-service
+      - auth-service
     environment:
       USERS_SERVICE_URL: http://users-service:8001
       PRODUCTS_SERVICE_URL: http://products-service:8002
       NOTIFICATIONS_SERVICE_URL: http://notifications-service:8003
       DATABASE_URL: postgresql+psycopg2://postgres@orders-db:5432/orders_db
+      JWT_SECRET_KEY: dev-secret
+      JWT_ISSUER: auth-service
     ports:
       - "8000:8000"
 
@@ -91,6 +107,7 @@ services:
     build: ./gateway
     container_name: api-gateway
     depends_on:
+      - auth-service
       - users-service
       - products-service
       - orders-service

@@ -72,3 +72,15 @@ class AddSkillResponse(BaseModel):
     skillId: str
     alreadyOwned: bool
     skillPoints: int
+
+
+class AuthenticateUserRequest(BaseModel):
+    """Credenciales para verificar un usuario."""
+    email: EmailStr
+    password: str
+
+
+class AuthenticatedUserResponse(BaseModel):
+    """Respuesta minima del usuario autenticado."""
+    userId: str
+    name: str
