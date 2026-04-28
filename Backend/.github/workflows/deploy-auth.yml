@@ -1,0 +1,20 @@
+name: Deploy Auth Service
+
+on:
+  push:
+    paths:
+      - "services/auth-service/**"
+      - ".github/workflows/deploy-auth.yml"
+
+jobs:
+  build-auth-service:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build auth-service image
+        run: docker build -t auth-service:latest ./services/auth-service
