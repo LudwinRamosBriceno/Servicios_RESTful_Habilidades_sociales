@@ -5,7 +5,9 @@ import './auth-view.css'
 // Componente de selección y registro de usuarios.
 export function AuthView({ onLogin, onRegister, addToast }) {
   const [mode, setMode] = useState('login')
-  const [showPassword, setShowPassword] = useState(false)
+  const [showLoginPassword, setShowLoginPassword] = useState(false)
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [form, setForm] = useState({ email: '', password: '', name: '', confirmPassword: '' })
 
   // Manejar inicio de sesión con credenciales reales.
@@ -104,23 +106,26 @@ export function AuthView({ onLogin, onRegister, addToast }) {
               {/* Contraseña */}
               <div className="auth-field">
                 <label htmlFor="password" className="auth-label">Contraseña</label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  placeholder="••••••••"
-                  value={form.password}
-                  onChange={handleChange}
-                  className="auth-input pr-11"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  className="auth-password-toggle"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                <div className="auth-input-wrapper">
+                  <input
+                    id="password"
+                    name="password"
+                    type={showLoginPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    placeholder="••••••••"
+                    value={form.password}
+                    onChange={handleChange}
+                    className="auth-input"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowLoginPassword((prev) => !prev)}
+                    className="auth-password-toggle"
+                    title={showLoginPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  >
+                    {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               {/* Botón de envío de inicio de sesión */}
@@ -170,44 +175,51 @@ export function AuthView({ onLogin, onRegister, addToast }) {
               {/* Contraseña */}
               <div className="auth-field">
                 <label htmlFor="password" className="auth-label">Contraseña</label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="new-password"
-                  placeholder="••••••••"
-                  value={form.password}
-                  onChange={handleChange}
-                  className="auth-input pr-11"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  className="auth-password-toggle"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                <div className="auth-input-wrapper">
+                  <input
+                    id="password"
+                    name="password"
+                    type={showRegisterPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    placeholder="••••••••"
+                    value={form.password}
+                    onChange={handleChange}
+                    className="auth-input"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowRegisterPassword((prev) => !prev)}
+                    className="auth-password-toggle"
+                    title={showRegisterPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  >
+                    {showRegisterPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               {/* Confirmar contraseña */}
               <div className="auth-field">
                 <label htmlFor="confirmPassword" className="auth-label">Confirmar contraseña</label>
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  autoComplete="new-password"
-                  placeholder="••••••••"
-                  value={form.confirmPassword}
-                  onChange={handleChange}
-                  className="auth-input pr-11"
-                />
-                <button type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  className="auth-password-toggle"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                <div className="auth-input-wrapper">
+                  <input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    placeholder="••••••••"
+                    value={form.confirmPassword}
+                    onChange={handleChange}
+                    className="auth-input"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                    className="auth-password-toggle"
+                    title={showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               <button type="submit" className="auth-submit-button" style={{ color: '#6B3A4F' }}>
