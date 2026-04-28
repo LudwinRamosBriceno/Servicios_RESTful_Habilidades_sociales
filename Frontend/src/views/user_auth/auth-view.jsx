@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Eye, EyeOff, Sparkles } from 'lucide-react'
 import './auth-view.css'
 
@@ -9,6 +9,14 @@ export function AuthView({ onLogin, onRegister, addToast }) {
   const [showRegisterPassword, setShowRegisterPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [form, setForm] = useState({ email: '', password: '', name: '', confirmPassword: '' })
+
+  // Limpiar formulario y visibilidad de contraseñas al cambiar de modo
+  useEffect(() => {
+    setForm({ email: '', password: '', name: '', confirmPassword: '' })
+    setShowLoginPassword(false)
+    setShowRegisterPassword(false)
+    setShowConfirmPassword(false)
+  }, [mode])
 
   // Manejar inicio de sesión con credenciales reales.
   const handleLoginSubmit = async (e) => {
