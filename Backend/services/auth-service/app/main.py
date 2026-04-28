@@ -12,3 +12,5 @@ def healthcheck():
     Ruta de salud para verificar que el servicio de autenticación está funcionando correctamente.
     """
     return {"status": "ok", "service": "auth-service"}
+
+# Prueba workflow
