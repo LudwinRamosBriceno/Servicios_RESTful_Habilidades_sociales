@@ -8,7 +8,7 @@ export function AuthView({ onLogin, onRegister, addToast }) {
   const [showPassword, setShowPassword] = useState(false)
   const [form, setForm] = useState({ email: '', password: '', name: '', confirmPassword: '' })
 
-  // Manejar inicio de sesión visual.
+  // Manejar inicio de sesión con credenciales reales.
   const handleLoginSubmit = async (e) => {
     e.preventDefault()
     if (!form.email) {
@@ -20,12 +20,8 @@ export function AuthView({ onLogin, onRegister, addToast }) {
       return
     }
     try {
-      const visualUser = {
-        name: form.email.split('@')[0] || 'usuario',
-        email: form.email,
-        skills: [],
-      }
-      await onLogin(visualUser)
+      await onLogin(form.email, form.password)
+      setForm({ email: '', password: '', name: '', confirmPassword: '' })
     } catch {
       // El manejo de errores se centraliza en App.
     }
@@ -52,6 +48,7 @@ export function AuthView({ onLogin, onRegister, addToast }) {
     }
     try {
       await onRegister(form.name, form.email, form.password)
+      setForm({ email: '', password: '', name: '', confirmPassword: '' })
     } catch {
       // El manejo de errores se centraliza en App.
     }

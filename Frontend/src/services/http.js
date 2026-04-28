@@ -1,10 +1,12 @@
+import { getToken } from './token-storage'
+
 const API_URL_BASE = import.meta.env.VITE_API_BASE_URL;
 
 // Función para realizar solicitud HTTP a la API
 async function request(path, options = {}) {
 
     // Obtiene la configuración de la solicitud
-    const { method = 'GET', headers = {}, body } = options;
+    const { method = 'GET', headers = {}, body, auth = false } = options;
 
     console.log(`[Frontend]' API_URL_BASE: ${API_URL_BASE}, Path: ${path}, Method: ${method}, Body:`, body)
 
@@ -14,6 +16,12 @@ async function request(path, options = {}) {
 
     if (body) {
         requestHeaders['Content-Type'] = 'application/json'
+    }
+
+    // Agregar token JWT solo cuando la solicitud lo requiere
+    const token = auth ? getToken() : null
+    if (token) {
+        requestHeaders['Authorization'] = `Bearer ${token}`
     }
 
     // Realizar la solicitud utilizando fetch con la configuración proporcionada

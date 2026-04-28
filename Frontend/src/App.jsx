@@ -5,14 +5,14 @@ import { AuthView } from '@/views/user_auth/auth-view'
 import { ProfileView } from '@/views/user_profile/profile-view'
 import { CatalogView } from '@/views/skills_catalog/catalog-view'
 import { OrdersView } from '@/views/skills_orders/orders-view'
-import { getUsers, registerUser } from '@/services/auth'
+import { login, registerUser } from '@/services/auth'
 import { getUserById } from '@/services/user'
 import { getAllSkills } from '@/services/products'
 import { orderSkill } from '@/services/orders'
+import { getToken, clearToken } from '@/services/token-storage'
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)           // Controlar si el usuario está autenticado
-  const [users, setUsers] = useState([])                                  // Almacenar lista de usuarios disponibles para seleccionar
   const [user, setUser] = useState(null)                                  // Almacenar la información del usuario autenticado
   const [currentView, setCurrentView] = useState('auth')                  // Controlar la vista actual (auth, profile, catalog, orders)
   const [skills, setSkills] = useState([])                                // Almacenar las habilidades disponibles en el catálogo
@@ -21,60 +21,78 @@ function App() {
   // Manejar las notificaciones de toast
   const { toasts, addToast, dismiss } = useToasts()
 
-  // Cargar datos iniciales para selector de usuarios y catálogo.
+  // Restaurar sesión desde localStorage al montar el componente
   useEffect(() => {
+    const restoreSession = async () => {
+      const token = getToken()
+      if (token) {
+        try {
+          // Implementar endpoint para validar token y obtener datos del usuario
+          // Por ahora, asumimos que el token es válido
+          setIsAuthenticated(true)
+          console.log('Sesión restaurada desde localStorage')
+        } catch (error) {
+          console.error('Error al restaurar sesión:', error)
+          clearToken()
+        }
+      }
+    }
+
+    restoreSession()
+  }, [])
+
+  // Cargar catálogo solo cuando el usuario está autenticado.
+  useEffect(() => {
+    if (!isAuthenticated) return
+
     const loadInitialData = async () => {
       try {
-        const [usersResponse, skillsResponse] = await Promise.all([getUsers(), getAllSkills()])
-        setUsers(Array.isArray(usersResponse) ? usersResponse : [])
+        const skillsResponse = await getAllSkills()
         setSkills(skillsResponse)
-        if (!Array.isArray(usersResponse)) {
-          // Si la respuesta de usuarios no es un array, mostrar un error específico.
-        }
       } catch (error) {
-        addToast('error', error.message || 'No se pudo cargar la información inicial.')
-        console.error('Error al cargar datos iniciales:', error)
+        addToast('error', error.message || 'No se pudo cargar las habilidades.')
+        console.error('Error al cargar habilidades:', error)
       }
     }
 
     loadInitialData()
-  }, [])
+  }, [isAuthenticated, addToast])
 
-  // Controlar el ingreso del usuario
-  const handleLogin = async (selectedUser) => {
+  // Controlar el ingreso del usuario con credenciales
+  const handleLogin = async (email, password) => {
     try {
-      if (!selectedUser?.id) {
-        setUser(selectedUser)
-        setIsAuthenticated(true)
-        setCurrentView('profile')
-        addToast('success', `Bienvenido, ${selectedUser?.name || 'usuario'}!`)
-        console.log('Usuario autenticado exitosamente:', selectedUser)
-        return
+      // Llamar al servicio de login con credenciales
+      const loginResponse = await login(email, password)
+      // loginResponse contiene: { access_token, token_type, user_id }
+      
+      // Obtener datos completos del usuario para mostrarlos en perfil
+      const userResponse = await getUserById(loginResponse.user_id)
+      setUser(userResponse)
+      
+      // Verificar que se recibió un token de acceso válido
+      if(!loginResponse.access_token) {
+        throw new Error('No se recibió un token de acceso válido.')
       }
 
-      // Obtener datos completos del usuario para mostrarlos en perfil.
-      const userResponse = await getUserById(selectedUser.id)
-      setUser(userResponse)
       setIsAuthenticated(true)
       setCurrentView('profile')
       addToast('success', `Bienvenido, ${userResponse.name}!`)
       console.log('Usuario autenticado exitosamente:', userResponse)
     } catch (error) {
-      addToast('error', error.message || 'No se pudo obtener la información del usuario.')
-      console.error('Error al obtener información del usuario:', error)
+      addToast('error', error.message || 'No se pudo iniciar sesión.')
+      console.error('Error al iniciar sesión:', error)
     }
   }
 
   // Controlar el registro del usuario
   const handleRegister = async (name, email, password) => {
     try {
-      // Registrar el usuario y usar la respuesta del backend directamente. (debe cambiar de estado si backend responde ok)
+      // Registrar el usuario y usar la respuesta del backend directamente.
       const userResponse = await registerUser(name, email, password)
       setUser(userResponse)
-      setUsers((prev) => [...prev, userResponse])
       setIsAuthenticated(true)
-      setCurrentView('profile')
-      addToast('success', `Bienvenido a SkillsMarket, ${userResponse.name}!`)
+      setCurrentView('profile') // Redirigir a iniciar sesión después de registrarse
+      addToast('success', `¡Usuario registrado exitosamente!`)
       console.log('Usuario registrado exitosamente:', userResponse)
     } catch (error) {
       addToast('error', error.message || 'No se pudo registrar el usuario.')
@@ -84,10 +102,14 @@ function App() {
 
   // Controlar el cierre de sesión del usuario
   const handleLogout = () => {
-    // Actualiza el estado de autenticación (Llamada al backend para cerrar la sesión del usuario y limpiar cualquier token o cookie de autenticación)
+    // Limpiar el token del localStorage
+    clearToken()
+    // Actualiza el estado de autenticación
     setIsAuthenticated(false)
     // Limpiar la información del usuario
     setUser(null)
+    // Limpiar las habilidades
+    setSkills([])
     // Actualizar la vista actual a "seleccionar usuario" luego de cerrar sesión
     setCurrentView('auth')
     // Limpiar cualquier habilidad preseleccionada
