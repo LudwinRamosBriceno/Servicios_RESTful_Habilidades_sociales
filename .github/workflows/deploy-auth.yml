@@ -1,9 +1,9 @@
 name: Deploy Auth Service
-
+# Prueba workflow para desplegar el auth-service en Minikube.
 on:
   push:
     paths:
-      - "services/auth-service/**"
+      - "Backend/services/auth-service/**"
       - ".github/workflows/deploy-auth.yml"
 
 jobs:
