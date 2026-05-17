@@ -27,6 +27,10 @@ spec:
               value: http://notifications-service:8003
             - name: DATABASE_URL
               value: postgresql+psycopg2://postgres@orders-db:5432/orders_db
+            - name: JWT_SECRET_KEY
+              value: dev-secret
+            - name: JWT_ISSUER
+              value: auth-service
 ---
 apiVersion: v1
 kind: Service

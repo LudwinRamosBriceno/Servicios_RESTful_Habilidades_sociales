@@ -3,7 +3,17 @@ import os
 
 from fastapi import HTTPException, status
 
-from .models import AddSkillRequest, AddSkillResponse, CreateUserRequest, UpdateUserRequest, User, UserListItemResponse, UserResponse
+from .models import (
+    AddSkillRequest,
+    AddSkillResponse,
+    AuthenticateUserRequest,
+    AuthenticatedUserResponse,
+    CreateUserRequest,
+    UpdateUserRequest,
+    User,
+    UserListItemResponse,
+    UserResponse,
+)
 from .repository import UserRepository
 from .clients.product_http_client import ProductHttpClient
 
@@ -111,6 +121,14 @@ class UserService:
             alreadyOwned=already_owned,
             skillPoints=user.skills[payload.skillId]
         )
+
+    def authenticate_user(self, payload: AuthenticateUserRequest) -> AuthenticatedUserResponse:
+        """Valida credenciales y devuelve datos minimos del usuario."""
+        user = self._repository.get_by_email(payload.email)
+        if not user or user.password != payload.password:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenciales invalidas")
+
+        return AuthenticatedUserResponse(userId=user.id, name=user.name)
 
     def _to_response(self, user: User) -> UserResponse:
         """Mapea el modelo interno a DTO de respuesta para la API."""

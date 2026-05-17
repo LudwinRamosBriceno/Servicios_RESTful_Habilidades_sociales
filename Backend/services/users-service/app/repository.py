@@ -53,6 +53,17 @@ class UserRepository:
             return None
         return self._orm_to_user(orm_user)
 
+    def get_by_email(self, email: str) -> User | None:
+        """Busca un usuario por email sin distinguir mayusculas/minusculas."""
+        statement = select(UserORM).where(func.lower(UserORM.email) == email.lower())
+        with self._session_factory() as session:
+            session: Session
+            orm_user = session.scalars(statement).first()
+
+        if not orm_user:
+            return None
+        return self._orm_to_user(orm_user)
+
     def find_all(self) -> List[User]:
         """Recupera todos los usuarios registrados."""
         statement = select(UserORM)

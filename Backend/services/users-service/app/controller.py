@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from .models import AddSkillRequest, CreateUserRequest, UpdateUserRequest, UserListItemResponse
+from .models import AuthenticateUserRequest, AddSkillRequest, CreateUserRequest, UpdateUserRequest, UserListItemResponse
 from .repository import UserRepository
 from .service import UserService
 
@@ -43,3 +43,9 @@ def get_user_skills(user_id: str):
 def add_user_skill(user_id: str, payload: AddSkillRequest):
     """Agrega una habilidad al usuario o suma puntos si ya la tiene."""
     return service.add_skill(user_id, payload)
+
+
+@router.post("/auth/verify")
+def verify_credentials(payload: AuthenticateUserRequest):
+    """Valida credenciales para uso interno de auth-service."""
+    return service.authenticate_user(payload)
