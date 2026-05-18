@@ -64,6 +64,20 @@ class OrderRepository:
 
         return [self._orm_to_order(order) for order in orm_orders]
 
+    def update_status(self, order_id: str, status: OrderStatus, skill_points: int) -> Order | None:
+        """Actualiza el estado y los puntos de habilidad de una orden."""
+        with self._session_factory() as session:
+            session: Session
+            existing = session.get(OrderORM, order_id)
+            if not existing:
+                return None
+
+            existing.status = status.value
+            existing.skill_points = skill_points
+            session.commit()
+            session.refresh(existing)
+            return self._orm_to_order(existing)
+
     @staticmethod
     def _orm_to_order(orm_order: OrderORM) -> Order:
         """

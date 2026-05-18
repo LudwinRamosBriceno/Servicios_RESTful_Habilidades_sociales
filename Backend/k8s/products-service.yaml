@@ -1,3 +1,4 @@
+# Despliegue de la API de productos (rol de inventario en el flujo EDA).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -26,9 +27,14 @@ spec:
           ports:
             - containerPort: 8002
           env:
+            # Conexion a la base de datos.
             - name: DATABASE_URL
               value: postgresql+psycopg2://products_user:products_pass@products-db:5432/products_db
+            # Broker RabbitMQ para consumo de eventos.
+            - name: RABBITMQ_URL
+              value: amqp://guest:guest@rabbitmq:5672/
 ---
+# Servicio interno del cluster para products-service.
 apiVersion: v1
 kind: Service
 metadata:

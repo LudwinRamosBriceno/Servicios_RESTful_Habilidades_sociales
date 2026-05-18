@@ -2,11 +2,14 @@ import uuid
 
 from fastapi import HTTPException, status
 
-from .clients.notification_http_client import NotificationHttpClient
-from .clients.product_http_client import ProductHttpClient
-from .clients.user_http_client import UserHttpClient
+from .messaging import publish_event
 from .models import Order, OrderRequest, OrderResult, OrderStatus, utc_now_iso
 from .repository import OrderRepository
+
+# Eventos de dominio para el flujo EDA
+EVENT_ORDER_CREATED = "pedido.creado"
+EVENT_INVENTORY_CONFIRMED = "inventario.confirmado"
+EVENT_INVENTORY_REJECTED = "inventario.rechazado"
 
 
 class OrderService:
@@ -14,64 +17,62 @@ class OrderService:
     Servicio de órdenes que maneja la lógica de negocio relacionada con la creación y recuperación de órdenes.
     """
 
-    def __init__(
-        self,
-        repository: OrderRepository,
-        user_client: UserHttpClient,
-        product_client: ProductHttpClient,
-        notification_client: NotificationHttpClient,
-    ) -> None:
+    def __init__(self, repository: OrderRepository) -> None:
         """
-        Inicializa el servicio de órdenes con el repositorio y los clientes HTTP proporcionados.
+        Inicializa el servicio de órdenes con el repositorio proporcionado.
         """
         self._repository = repository
-        self._user_client = user_client
-        self._product_client = product_client
-        self._notification_client = notification_client
 
     def create_order(self, payload: OrderRequest, user_id: str) -> tuple[OrderResult, int]:
         """
-        Crea una nueva orden, manejando la lógica de negocio relacionada con la validación de la solicitud,
-        la verificación de la existencia del usuario y el producto, la actualización del stock del producto,
-        la creación de la orden, la adición de puntos de habilidad al usuario, y el envío de una notificación 
-        de orden completada.
+        Crea una nueva orden en estado pendiente y publica el evento para el flujo EDA.
         """
         if payload.quantity <= 0:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="La cantidad debe ser mayor que 0")
 
-        self._user_client.get_user(user_id)
-        product = self._product_client.get_product(payload.productId)
-
-        if product.stock < payload.quantity:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Stock insuficiente")
-
-        self._product_client.discount_stock(payload.productId, payload.quantity)
-
-        skill_points = payload.quantity
         order = Order(
             id=f"ord_{uuid.uuid4().hex[:8]}",
             user_id=user_id,
             product_id=payload.productId,
             quantity=payload.quantity,
-            status=OrderStatus.COMPLETED,
-            skill_points=skill_points,
+            status=OrderStatus.PENDING,
+            skill_points=0,
             created_at=utc_now_iso(),
         )
         self._repository.create(order)
-
-        already_owned = self._user_client.add_skill(user_id, payload.productId, skill_points)
-        self._notification_client.send_order_completed(
-            order.id,
-            user_id,
-            product.name,
-            skill_points,
-            issued_by="auth-service",
+        publish_event(
+            EVENT_ORDER_CREATED,
+            {
+                "orderId": order.id,
+                "userId": user_id,
+                "productId": payload.productId,
+                "quantity": payload.quantity,
+            },
+            correlation_id=order.id,
         )
 
-        http_status = status.HTTP_202_ACCEPTED if already_owned else status.HTTP_201_CREATED
-        message = "La habilidad ya estaba asignada, se sumaron puntos" if already_owned else "Orden completada exitosamente"
+        return self._to_result(order, "Orden creada, pendiente de inventario"), status.HTTP_202_ACCEPTED
 
-        return self._to_result(order, message), http_status
+    def handle_inventory_confirmed(self, payload: dict) -> None:
+        """
+        Actualiza la orden a completada al recibir confirmacion de inventario.
+        """
+        data = payload.get("data", {})
+        order_id = data.get("orderId")
+        if not order_id:
+            return
+        skill_points = data.get("skillPoints", data.get("quantity", 0))
+        self._repository.update_status(order_id, OrderStatus.COMPLETED, skill_points)
+
+    def handle_inventory_rejected(self, payload: dict) -> None:
+        """
+        Actualiza la orden a rechazada al recibir rechazo de inventario.
+        """
+        data = payload.get("data", {})
+        order_id = data.get("orderId")
+        if not order_id:
+            return
+        self._repository.update_status(order_id, OrderStatus.REJECTED, 0)
 
     def get_order(self, order_id: str) -> OrderResult:
         """

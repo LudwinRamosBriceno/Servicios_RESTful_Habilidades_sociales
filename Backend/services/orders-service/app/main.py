@@ -5,6 +5,9 @@ from pathlib import Path
 import os
 
 from .controller import router as orders_router
+from .messaging import start_consumer
+from .repository import OrderRepository
+from .service import OrderService, EVENT_INVENTORY_CONFIRMED, EVENT_INVENTORY_REJECTED
 
 # Inicialización de la aplicación FastAPI y registro del enrutador de órdenes.
 app = FastAPI(title="NovaLink Orders Service", version="1.0.0")
@@ -29,6 +32,27 @@ def run_db_migrations() -> None:
         # Alembic can raise SystemExit when invoked programmatically in some environments.
         # Migrations already logged as executed; avoid killing the API process.
         print(f"[orders-service] Alembic exited during startup with code={exc.code}; continuing.")
+
+
+@app.on_event("startup")
+def start_event_consumers() -> None:
+    """
+    Arranca consumidores de eventos para actualizar estado de ordenes.
+    """
+    service = OrderService(OrderRepository())
+
+    def _handle_event(payload: dict) -> None:
+        event_type = payload.get("event_type")
+        if event_type == EVENT_INVENTORY_CONFIRMED:
+            service.handle_inventory_confirmed(payload)
+        elif event_type == EVENT_INVENTORY_REJECTED:
+            service.handle_inventory_rejected(payload)
+
+    start_consumer(
+        queue_name="orders-service",
+        routing_keys=[EVENT_INVENTORY_CONFIRMED, EVENT_INVENTORY_REJECTED],
+        handler=_handle_event,
+    )
 
 @app.get("/health")
 def healthcheck():

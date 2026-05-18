@@ -41,15 +41,27 @@ services:
     ports:
       - "5436:5432"
 
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
   users-service:
     build: ./services/users-service
     container_name: users-service
     depends_on:
       - users-db
       - products-service
+      - rabbitmq
     environment:
       DATABASE_URL: postgresql+psycopg2://users_user:users_pass@users-db:5432/users_db
       PRODUCTS_SERVICE_URL: http://products-service:8002
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
     ports:
       - "8001:8001"
 
@@ -58,8 +70,10 @@ services:
     container_name: products-service
     depends_on:
       - products-db
+      - rabbitmq
     environment:
       DATABASE_URL: postgresql+psycopg2://products_user:products_pass@products-db:5432/products_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
     ports:
       - "8002:8002"
 
@@ -68,6 +82,9 @@ services:
     container_name: notifications-service
     depends_on:
       - notifications-db
+      - rabbitmq
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
     ports:
       - "8003:8003"
 
@@ -76,6 +93,7 @@ services:
     container_name: auth-service
     depends_on:
       - users-service
+      - rabbitmq
     environment:
       USERS_SERVICE_URL: http://users-service:8001
       JWT_SECRET_KEY: dev-secret
@@ -93,13 +111,12 @@ services:
       - products-service
       - notifications-service
       - auth-service
+      - rabbitmq
     environment:
-      USERS_SERVICE_URL: http://users-service:8001
-      PRODUCTS_SERVICE_URL: http://products-service:8002
-      NOTIFICATIONS_SERVICE_URL: http://notifications-service:8003
       DATABASE_URL: postgresql+psycopg2://postgres@orders-db:5432/orders_db
       JWT_SECRET_KEY: dev-secret
       JWT_ISSUER: auth-service
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
     ports:
       - "8000:8000"
 
