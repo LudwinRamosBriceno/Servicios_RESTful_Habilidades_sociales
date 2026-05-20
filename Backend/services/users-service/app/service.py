@@ -77,7 +77,9 @@ class UserService:
         return self._to_response(user)
 
     def update_user(self, user_id: str, payload: UpdateUserRequest) -> UserResponse:
-        """Actualiza campos del usuario de forma parcial (solo si llegan en payload)."""
+        """
+        Actualiza campos del usuario de forma parcial (solo si llegan en payload).
+        """
         user = self._repository.get_by_id(user_id)
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")

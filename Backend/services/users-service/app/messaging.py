@@ -63,6 +63,7 @@ def start_consumer(queue_name: str, routing_keys: Iterable[str], handler: Callab
         Conecta a RabbitMQ, declara el intercambio y la cola, y se suscribe a los mensajes que coincidan con las claves de enrutamiento especificadas.
         """
         while True:
+            # Intenta establecer la conexión y consumir mensajes.
             try:
                 connection = _connect()
                 channel = connection.channel()
@@ -72,6 +73,9 @@ def start_consumer(queue_name: str, routing_keys: Iterable[str], handler: Callab
                     channel.queue_bind(exchange=EXCHANGE_NAME, queue=queue_name, routing_key=key)
 
                 def _on_message(ch, method, _properties, body) -> None:
+                    """
+                    Maneja los mensajes recibidos del broker de mensajería.
+                    """
                     try:
                         payload = json.loads(body)
                         handler(payload)
@@ -83,9 +87,13 @@ def start_consumer(queue_name: str, routing_keys: Iterable[str], handler: Callab
                 channel.basic_qos(prefetch_count=1)
                 channel.basic_consume(queue=queue_name, on_message_callback=_on_message)
                 channel.start_consuming()
+            
+            # Si ocurre cualquier error en la conexión o consumo, se imprime el error 
+            # y se espera 5 segundos antes de intentar reconectar.
             except Exception as exc:
                 print(f"[messaging] consumer error: {exc}")
                 time.sleep(5)
-
+    
+    # Inicia el hilo del consumidor como un daemon para que se ejecute en segundo plano.
     thread = threading.Thread(target=_run, daemon=True)
     thread.start()

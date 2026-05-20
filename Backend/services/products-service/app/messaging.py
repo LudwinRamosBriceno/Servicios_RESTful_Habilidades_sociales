@@ -62,6 +62,7 @@ def start_consumer(queue_name: str, routing_keys: Iterable[str], handler: Callab
         Función que ejecuta el consumidor de RabbitMQ.
         """
         while True:
+            # Intenta conectarse a RabbitMQ y consumir mensajes.
             try:
                 connection = _connect()
                 channel = connection.channel()
@@ -71,6 +72,10 @@ def start_consumer(queue_name: str, routing_keys: Iterable[str], handler: Callab
                     channel.queue_bind(exchange=EXCHANGE_NAME, queue=queue_name, routing_key=key)
 
                 def _on_message(ch, method, _properties, body) -> None:
+                    """
+                    Manejador de mensajes que se ejecuta cuando se recibe un mensaje en la cola.
+                    Intenta procesar el mensaje con el handler proporcionado y reconoce o rechaza el mensaje
+                    """
                     try:
                         payload = json.loads(body)
                         handler(payload)
@@ -78,13 +83,17 @@ def start_consumer(queue_name: str, routing_keys: Iterable[str], handler: Callab
                     except Exception as exc:
                         print(f"[messaging] handler error: {exc}")
                         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
-
+                # Configura el consumidor para procesar un mensaje a la vez y comienza a consumir mensajes de la cola.
                 channel.basic_qos(prefetch_count=1)
                 channel.basic_consume(queue=queue_name, on_message_callback=_on_message)
                 channel.start_consuming()
+
+            # Si ocurre un error en la conexión o el consumo de mensajes, 
+            # imprime el error y espera 5 segundos antes de intentar reconectar.    
             except Exception as exc:
                 print(f"[messaging] consumer error: {exc}")
                 time.sleep(5)
 
+    # Inicia el consumidor en un hilo separado para que no bloquee la ejecución principal del servicio.
     thread = threading.Thread(target=_run, daemon=True)
     thread.start()

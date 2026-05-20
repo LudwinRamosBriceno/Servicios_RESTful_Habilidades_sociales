@@ -10,6 +10,7 @@ from .repository import OrderRepository
 EVENT_ORDER_CREATED = "pedido.creado"
 EVENT_INVENTORY_CONFIRMED = "inventario.confirmado"
 EVENT_INVENTORY_REJECTED = "inventario.rechazado"
+EVENT_ORDER_STATUS_UPDATED = "orders.status.updated"
 
 
 class OrderService:
@@ -23,7 +24,7 @@ class OrderService:
         """
         self._repository = repository
 
-    def create_order(self, payload: OrderRequest, user_id: str) -> tuple[OrderResult, int]:
+    def create_order(self, payload: OrderRequest, user_id: str, request_id: str | None) -> tuple[OrderResult, int]:
         """
         Crea una nueva orden en estado pendiente y publica el evento para el flujo EDA.
         """
@@ -43,6 +44,7 @@ class OrderService:
         publish_event(
             EVENT_ORDER_CREATED,
             {
+                "requestId": request_id,
                 "orderId": order.id,
                 "userId": user_id,
                 "productId": payload.productId,
@@ -58,21 +60,49 @@ class OrderService:
         Actualiza la orden a completada al recibir confirmacion de inventario.
         """
         data = payload.get("data", {})
+        request_id = data.get("requestId")
         order_id = data.get("orderId")
-        if not order_id:
+        user_id = data.get("userId")
+        if not order_id or not user_id:
             return
         skill_points = data.get("skillPoints", data.get("quantity", 0))
         self._repository.update_status(order_id, OrderStatus.COMPLETED, skill_points)
+        publish_event(
+            EVENT_ORDER_STATUS_UPDATED,
+            {
+                "requestId": request_id,
+                "orderId": order_id,
+                "userId": user_id,
+                "status": OrderStatus.COMPLETED.value,
+                "message": "Orden completada",
+            },
+            correlation_id=order_id,
+        )
 
     def handle_inventory_rejected(self, payload: dict) -> None:
         """
         Actualiza la orden a rechazada al recibir rechazo de inventario.
         """
         data = payload.get("data", {})
+        request_id = data.get("requestId")
         order_id = data.get("orderId")
-        if not order_id:
+        user_id = data.get("userId")
+        if not order_id or not user_id:
             return
         self._repository.update_status(order_id, OrderStatus.REJECTED, 0)
+        publish_event(
+            EVENT_ORDER_STATUS_UPDATED,
+            {
+                "requestId": request_id,
+                "orderId": order_id,
+                "userId": user_id,
+                "status": OrderStatus.REJECTED.value,
+                "message": "Orden rechazada",
+                "reason": data.get("reason"),
+                "statusCode": data.get("statusCode"),
+            },
+            correlation_id=order_id,
+        )
 
     def get_order(self, order_id: str) -> OrderResult:
         """

@@ -359,15 +359,23 @@ def start_response_consumer() -> None:
     Base.metadata.create_all(bind=engine)
 
     def _handle_response(payload: dict) -> None:
+        """
+        Maneja una respuesta recibida del servicio de órdenes.
+        """
         event_type = payload.get("event_type")
+        # Si el evento es un push event, notifica a los suscriptores correspondientes sin actualizar el estado de la solicitud.
         if event_type in PUSH_EVENTS:
             data = payload.get("data", {})
             user_id = data.get("userId")
             request_id = data.get("requestId")
             status_code = data.get("statusCode")
+
+            # Si no hay userId, no se puede notificar, así que se ignora el mensaje.
             if not user_id:
                 return
             message = data.get("message")
+
+            # Si el mensaje de respuesta incluye un código de estado, se agrega al mensaje para mayor claridad.
             if status_code:
                 message = f"{message} ({status_code})"
             key = _subscriber_key(user_id, None)
@@ -382,27 +390,39 @@ def start_response_consumer() -> None:
             )
             return
 
+        # Si el evento no es un evento de respuesta esperado, se ignora el mensaje.
         if event_type not in RESPONSE_EVENTS:
             return
 
+        # Si el evento es una actualización de estado de orden, se notifica a los suscriptores correspondientes sin actualizar el 
+        # estado de la solicitud, ya que este evento no corresponde a una respuesta directa a una solicitud del gateway.
         data = payload.get("data", {})
         request_id = data.get("requestId")
+
+        # Si no hay requestId, no se puede actualizar ni notificar, así que se ignora el mensaje.
         if not request_id:
             return
 
+        # Si el evento es una actualización de estado de orden, se notifica a los suscriptores correspondientes sin actualizar el estado de la solicitud.
         ok = data.get("ok", True)
         status_value = RequestStatus.COMPLETED if ok else RequestStatus.FAILED
         response_payload = data.get("result")
         error = data.get("error")
 
+        # Actualiza el estado de la solicitud en el repositorio y obtiene el registro actualizado para determinar a quién notificar.
         repo.update_request(request_id, status_value, response_payload, error)
         record = repo.get_request(request_id)
+
+        # Si no se encuentra el registro de la solicitud, no se puede notificar, así que se ignora el mensaje.
         if not record:
             return
 
+        # Si el evento es una respuesta a la creación de usuario, se notifica a los suscriptores correspondientes con un mensaje específico para esta acción.
         if event_type == EVENT_USERS_CREATE_RESPONDED:
             status_code = data.get("statusCode")
             message = "Usuario creado" if ok else (error or "Error al crear usuario")
+
+            # Si el mensaje de respuesta incluye un código de estado, se agrega al mensaje para mayor claridad.
             if not ok and status_code:
                 message = f"{message} ({status_code})"
             _notify_subscribers(
@@ -416,11 +436,16 @@ def start_response_consumer() -> None:
             )
             return
 
+        # Si el evento es una respuesta a la creación de orden, no se notifica a los suscriptores ya que esta acción tiene un flujo de comunicación diferente y se maneja principalmente a través de eventos de actualización de estado de orden.
         if event_type == EVENT_ORDERS_CREATE_RESPONDED:
             return
 
         key = _subscriber_key(record.user_id, record.client_id)
         status_code = data.get("statusCode")
+
+        # Si la respuesta indica éxito, se utiliza un mensaje de éxito específico para el tipo de evento; 
+        # si indica error, se utiliza el mensaje de error proporcionado o un mensaje genérico según el tipo de evento. 
+        # Si el mensaje de error incluye un código de estado, se agrega al mensaje para mayor claridad.
         if ok:
             message = RESPONSE_SUCCESS_MESSAGE.get(event_type, "Completado")
             result_payload = response_payload
@@ -440,6 +465,7 @@ def start_response_consumer() -> None:
             },
         )
 
+    # Inicia el consumidor para procesar las respuestas entrantes de los servicios en la cola "api-gateway-service" con los routing keys correspondientes.
     start_consumer(
         queue_name="api-gateway-service",
         routing_keys=["#.responded", EVENT_ORDERS_STATUS_UPDATED],

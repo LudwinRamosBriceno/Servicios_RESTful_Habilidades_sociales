@@ -110,49 +110,67 @@ class ProductService:
         Valida inventario y publica el evento correspondiente.
         """
         data = payload.get("data", {})
+        request_id = data.get("requestId")
         order_id = data.get("orderId")
         user_id = data.get("userId")
         product_id = data.get("productId")
         quantity = data.get("quantity")
 
+        # Si falta información esencial en el payload, se lanza un error 
+        # y se publica un evento de rechazo de inventario.
         if not order_id or not user_id or not product_id or not isinstance(quantity, int):
             raise ValueError("Invalid order.created payload")
 
+        # Se busca el producto en la base de datos para validar su disponibilidad y stock.
         product = self._repository.find_by_id(product_id)
+
+        # Si el producto no existe o no está activo, se publica un evento de rechazo de 
+        # inventario con el motivo y código de estado 404.
         if not product or not product.active:
             publish_event(
                 EVENT_INVENTORY_REJECTED,
                 {
+                    "requestId": request_id,
                     "orderId": order_id,
                     "userId": user_id,
                     "productId": product_id,
                     "quantity": quantity,
                     "reason": "Producto no disponible",
+                    "statusCode": 404,
                 },
                 correlation_id=order_id,
             )
             return
 
+        # Si el stock es insuficiente para cubrir la cantidad solicitada, 
+        # se publica un evento de rechazo de inventario
         if product.stock < quantity:
             publish_event(
                 EVENT_INVENTORY_REJECTED,
                 {
+                    "requestId": request_id,
                     "orderId": order_id,
                     "userId": user_id,
                     "productId": product_id,
                     "quantity": quantity,
                     "reason": "Stock insuficiente",
+                    "statusCode": 422,
                 },
                 correlation_id=order_id,
             )
             return
 
+        # Si el producto está disponible y hay stock suficiente, se descuenta el stock.
         product.stock -= quantity
+
+        # Se guarda el producto actualizado en la base de datos. 
         self._repository.save(product)
 
+        # Se publica un evento de confirmación de inventario con los detalles del pedido y el producto.
         publish_event(
             EVENT_INVENTORY_CONFIRMED,
             {
+                "requestId": request_id,
                 "orderId": order_id,
                 "userId": user_id,
                 "productId": product_id,
