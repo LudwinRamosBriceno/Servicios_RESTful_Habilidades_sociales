@@ -41,6 +41,16 @@ services:
     ports:
       - "5436:5432"
 
+  gateway-db:
+    image: postgres:18
+    container_name: gateway-db
+    environment:
+      POSTGRES_DB: gateway_db
+      POSTGRES_USER: gateway_user
+      POSTGRES_PASSWORD: gateway_pass
+    ports:
+      - "5437:5432"
+
   rabbitmq:
     image: rabbitmq:3.13-management
     container_name: rabbitmq
@@ -121,13 +131,17 @@ services:
       - "8000:8000"
 
   api-gateway:
-    build: ./gateway
+    build: ./services/api-gateway-service
     container_name: api-gateway
     depends_on:
+      - gateway-db
       - auth-service
-      - users-service
-      - products-service
-      - orders-service
-      - notifications-service
+      - rabbitmq
+    environment:
+      DATABASE_URL: postgresql+psycopg2://gateway_user:gateway_pass@gateway-db:5432/gateway_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      AUTH_SERVICE_URL: http://auth-service:8004
+      JWT_SECRET_KEY: dev-secret
+      JWT_ISSUER: auth-service
     ports:
-      - "8080:80"
+      - "8080:8080"
