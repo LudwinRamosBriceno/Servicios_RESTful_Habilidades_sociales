@@ -1,0 +1,65 @@
+# Reclamo de volumen persistente para la BD del gateway.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gateway-db-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: standard
+---
+# Despliegue de Postgres para el gateway.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway-db
+  template:
+    metadata:
+      labels:
+        app: gateway-db
+    spec:
+      containers:
+        - name: gateway-db
+          image: postgres:18
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+          env:
+            # Configuracion inicial de Postgres.
+            - name: POSTGRES_DB
+              value: gateway_db
+            - name: POSTGRES_USER
+              value: gateway_user
+            - name: POSTGRES_PASSWORD
+              value: gateway_pass
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: gateway-db-storage
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: gateway-db-storage
+          persistentVolumeClaim:
+            claimName: gateway-db-pvc
+---
+# Servicio interno del cluster para la BD del gateway.
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-db
+spec:
+  selector:
+    app: gateway-db
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+  type: ClusterIP
