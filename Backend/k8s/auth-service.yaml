@@ -19,6 +19,26 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8004
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8004
+            failureThreshold: 30
+            periodSeconds: 2
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8004
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8004
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 3
           env:
             # URL del users-service para verificacion de credenciales.
             - name: USERS_SERVICE_URL

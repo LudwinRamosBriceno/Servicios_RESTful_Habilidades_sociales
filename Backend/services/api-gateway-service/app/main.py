@@ -1,14 +1,15 @@
 import asyncio
 import json
 import os
-import queue
 import threading
+import time
 import uuid
+from dataclasses import dataclass
 from typing import Any, Dict
 
 import httpx
 import jwt
-from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from .db import Base, engine
@@ -46,8 +47,17 @@ JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev-secret")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 JWT_ISSUER = os.getenv("JWT_ISSUER", "auth-service")
 
+@dataclass
+class SseSubscriber:
+    """
+    Canal SSE asociado al event loop que atiende la conexion.
+    """
+    queue: asyncio.Queue
+    loop: asyncio.AbstractEventLoop
+
+
 # Mapa de suscriptores SSE por usuario/cliente.
-_subscribers: Dict[str, list[queue.Queue]] = {}
+_subscribers: Dict[str, list[SseSubscriber]] = {}
 _subscribers_lock = threading.Lock()
 
 
@@ -62,22 +72,22 @@ def _subscriber_key(user_id: str | None, client_id: str | None) -> str:
     return "anonymous"
 
 
-def _add_subscriber(key: str, q: queue.Queue) -> None:
+def _add_subscriber(key: str, subscriber: SseSubscriber) -> None:
     """
     Registra un canal SSE en la lista de suscriptores.
     """
     with _subscribers_lock:
-        _subscribers.setdefault(key, []).append(q)
+        _subscribers.setdefault(key, []).append(subscriber)
 
 
-def _remove_subscriber(key: str, q: queue.Queue) -> None:
+def _remove_subscriber(key: str, subscriber: SseSubscriber) -> None:
     """
     Remueve un canal SSE cuando el cliente se desconecta.
     """
     with _subscribers_lock:
         if key not in _subscribers:
             return
-        _subscribers[key] = [item for item in _subscribers[key] if item is not q]
+        _subscribers[key] = [item for item in _subscribers[key] if item is not subscriber]
         if not _subscribers[key]:
             del _subscribers[key]
 
@@ -87,8 +97,20 @@ def _notify_subscribers(key: str, event: dict) -> None:
     Publica un evento de respuesta a los suscriptores SSE.
     """
     with _subscribers_lock:
-        for q in _subscribers.get(key, []):
-            q.put(event)
+        subscribers = list(_subscribers.get(key, []))
+
+    for subscriber in subscribers:
+        if subscriber.loop.is_closed():
+            _remove_subscriber(key, subscriber)
+            continue
+
+        def _enqueue(target: SseSubscriber = subscriber, payload: dict = event) -> None:
+            try:
+                target.queue.put_nowait(payload)
+            except asyncio.QueueFull:
+                print(f"[gateway] SSE queue full for {key}; dropping event")
+
+        subscriber.loop.call_soon_threadsafe(_enqueue)
 
 
 def _decode_token(token: str) -> dict:
@@ -144,30 +166,60 @@ async def login(payload: dict) -> JSONResponse:
     """
     Proxy sincrono para login (unico request directo).
     """
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        response = await client.post(f"{AUTH_SERVICE_URL}/login", json=payload)
-    return JSONResponse(status_code=response.status_code, content=response.json())
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(f"{AUTH_SERVICE_URL}/login", json=payload)
+    except httpx.TimeoutException:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"detail": "Servicio de autenticacion no respondio a tiempo"},
+        )
+    except httpx.RequestError as exc:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"detail": f"Servicio de autenticacion no disponible: {exc}"},
+        )
+
+    try:
+        content = response.json()
+    except ValueError:
+        content = {"detail": response.text or "Respuesta invalida del servicio de autenticacion"}
+
+    return JSONResponse(status_code=response.status_code, content=content)
 
 
 @app.get("/api/events")
-async def events(identity: dict = Depends(get_identity)) -> StreamingResponse:
+async def events(request: Request, identity: dict = Depends(get_identity)) -> StreamingResponse:
     """
     Canal SSE para recibir respuestas asincronas.
     """
     key = _subscriber_key(identity.get("user_id"), identity.get("client_id"))
-    q: queue.Queue = queue.Queue()
-    _add_subscriber(key, q)
+    subscriber = SseSubscriber(queue=asyncio.Queue(maxsize=100), loop=asyncio.get_running_loop())
+    _add_subscriber(key, subscriber)
 
     async def _stream() -> Any:
         try:
-            loop = asyncio.get_running_loop()
             while True:
-                event = await loop.run_in_executor(None, q.get)
+                if await request.is_disconnected():
+                    break
+                try:
+                    event = await asyncio.wait_for(subscriber.queue.get(), timeout=15)
+                except asyncio.TimeoutError:
+                    yield ": keepalive\n\n"
+                    continue
                 yield f"data: {json.dumps(event)}\n\n"
         finally:
-            _remove_subscriber(key, q)
+            _remove_subscriber(key, subscriber)
 
     return StreamingResponse(_stream(), media_type="text/event-stream")
+
+
+@app.get("/health")
+def healthcheck() -> dict:
+    """
+    Endpoint de salud para Kubernetes y diagnostico local.
+    """
+    return {"status": "ok", "service": "api-gateway"}
 
 
 @app.get("/api/products")
@@ -356,7 +408,19 @@ def start_response_consumer() -> None:
     """
     Arranca el consumidor de respuestas del gateway.
     """
-    Base.metadata.create_all(bind=engine)
+    last_error: Exception | None = None
+    for attempt in range(1, 13):
+        try:
+            Base.metadata.create_all(bind=engine)
+            last_error = None
+            break
+        except Exception as exc:
+            last_error = exc
+            print(f"[gateway] database not ready, retry {attempt}/12: {exc}")
+            time.sleep(5)
+
+    if last_error is not None:
+        raise last_error
 
     def _handle_response(payload: dict) -> None:
         """

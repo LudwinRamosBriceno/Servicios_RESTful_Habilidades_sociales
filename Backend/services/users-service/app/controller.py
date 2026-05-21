@@ -57,7 +57,6 @@ def add_user_skill(user_id: str, payload: AddSkillRequest):
     """
     return service.add_skill(user_id, payload)
 
-
 @router.post("/auth/verify")
 def verify_credentials(payload: AuthenticateUserRequest):
     """
