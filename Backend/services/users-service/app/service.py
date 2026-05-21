@@ -16,19 +16,31 @@ from .models import (
 )
 from .repository import UserRepository
 from .clients.product_http_client import ProductHttpClient
+from .messaging import publish_event
+
+# Eventos de dominio para el flujo EDA
+EVENT_INVENTORY_CONFIRMED = "inventario.confirmado"
+EVENT_USER_UPDATED = "usuario.actualizado"
 
 
 class UserService:
-    """Servicio para gestionar usuarios y sus habilidades."""
+    """
+    Servicio para gestionar usuarios y sus habilidades.
+    """
 
     def __init__(self, repository: UserRepository) -> None:
+        """
+        Inicializa el servicio de usuarios con el repositorio proporcionado y configura el cliente HTTP para products-service.
+        """
         self._repository = repository
         # URL configurable para poder cambiar entre entornos local/docker/k8s.
         products_service_url = os.getenv("PRODUCTS_SERVICE_URL", "http://products-service:8002")
         self._product_client = ProductHttpClient(products_service_url)
 
     def create_user(self, payload: CreateUserRequest) -> UserResponse:
-        """Crea un usuario validando que el nombre no exista previamente."""
+        """
+        Crea un usuario validando que el nombre no exista previamente.
+        """
         existing_user = self._repository.get_by_name(payload.name)
         if existing_user:
             raise HTTPException(
@@ -47,21 +59,27 @@ class UserService:
         return self._to_response(user)
     
     def list_users(self) -> list[UserListItemResponse]:
-        """Lista de todos los usuarios."""
+        """
+        Lista de todos los usuarios.
+        """
         users = self._repository.find_all()
         if not users:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No hay usuarios registrados")
         return [UserListItemResponse(id=user.id, name=user.name) for user in users]
 
     def get_user(self, user_id: str) -> UserResponse:
-        """Obtiene un usuario por su ID."""
+        """
+        Obtiene un usuario por su ID.
+        """
         user = self._repository.get_by_id(user_id)
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
         return self._to_response(user)
 
     def update_user(self, user_id: str, payload: UpdateUserRequest) -> UserResponse:
-        """Actualiza campos del usuario de forma parcial (solo si llegan en payload)."""
+        """
+        Actualiza campos del usuario de forma parcial (solo si llegan en payload).
+        """
         user = self._repository.get_by_id(user_id)
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
@@ -84,7 +102,9 @@ class UserService:
         return self._to_response(user)
 
     def get_user_skills(self, user_id: str) -> dict:
-        """Devuelve las habilidades del usuario con nombre legible."""
+        """
+        Devuelve las habilidades del usuario con nombre legible.
+        """
         user = self._repository.get_by_id(user_id)
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
@@ -102,7 +122,9 @@ class UserService:
         }
 
     def add_skill(self, user_id: str, payload: AddSkillRequest) -> AddSkillResponse:
-        """Agrega una habilidad o acumula puntos si ya existe en el usuario."""
+        """
+        Agrega una habilidad o acumula puntos si ya existe en el usuario.
+        """
         user = self._repository.get_by_id(user_id)
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
@@ -122,8 +144,39 @@ class UserService:
             skillPoints=user.skills[payload.skillId]
         )
 
+    def process_inventory_confirmed(self, payload: dict) -> None:
+        """
+        Aplica puntos de habilidad y publica el evento de usuario actualizado.
+        """
+        data = payload.get("data", {})
+        order_id = data.get("orderId")
+        user_id = data.get("userId")
+        product_id = data.get("productId")
+        skill_points = data.get("skillPoints")
+        product_name = data.get("productName")
+
+        if not order_id or not user_id or not product_id or not isinstance(skill_points, int):
+            raise ValueError("Invalid inventory.confirmed payload")
+
+        result = self.add_skill(user_id, AddSkillRequest(skillId=product_id, skillPoints=skill_points))
+
+        publish_event(
+            EVENT_USER_UPDATED,
+            {
+                "orderId": order_id,
+                "userId": user_id,
+                "productId": product_id,
+                "productName": product_name or self._resolve_skill_name(product_id),
+                "skillPoints": skill_points,
+                "alreadyOwned": result.alreadyOwned,
+            },
+            correlation_id=order_id,
+        )
+
     def authenticate_user(self, payload: AuthenticateUserRequest) -> AuthenticatedUserResponse:
-        """Valida credenciales y devuelve datos minimos del usuario."""
+        """
+        Validar credenciales y devolver datos minimos del usuario.
+        """
         user = self._repository.get_by_email(payload.email)
         if not user or user.password != payload.password:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenciales invalidas")
@@ -131,7 +184,9 @@ class UserService:
         return AuthenticatedUserResponse(userId=user.id, name=user.name)
 
     def _to_response(self, user: User) -> UserResponse:
-        """Mapea el modelo interno a DTO de respuesta para la API."""
+        """
+        Mapear el modelo interno a DTO de respuesta para la API.
+        """
         from .models import UserSkill
         skills_list = [
             UserSkill(skillId=skill_id, skillName=self._resolve_skill_name(skill_id), skillPoints=points)
@@ -146,6 +201,8 @@ class UserService:
         )
 
     def _resolve_skill_name(self, skill_id: str) -> str:
-        """Busca el nombre en products-service y, si no existe, devuelve 'Skill desconocida'."""
+        """
+        Busca el nombre en products-service y, si no existe, devuelve 'Skill desconocida'.
+        """
         skill_name = self._product_client.get_product_name(skill_id)
         return skill_name if skill_name else "Skill desconocida"

@@ -1,3 +1,4 @@
+# Reclamo de volumen persistente para la BD de ordenes.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -10,6 +11,7 @@ spec:
       storage: 2Gi
   storageClassName: standard
 ---
+# Despliegue de Postgres para ordenes.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -31,6 +33,7 @@ spec:
           ports:
             - containerPort: 5432
           env:
+            # Configuracion inicial de Postgres.
             - name: POSTGRES_DB
               value: orders_db
             - name: POSTGRES_USER
@@ -47,6 +50,7 @@ spec:
           persistentVolumeClaim:
             claimName: orders-db-pvc
 ---
+# Servicio interno del cluster para la BD de ordenes.
 apiVersion: v1
 kind: Service
 metadata:

@@ -1,35 +1,44 @@
 from pydantic import BaseModel
 
-
-# Modelo para un producto
 class Product(BaseModel):
+    """
+    Modelo de datos para representar un producto, incluyendo su ID, nombre, descripción, stock y estado activo.
+    """
     id: str
     name: str
     description: str
     stock: int
     active: bool = True
 
-# Modelo para las solicitudes de creación de producto
 class CreateProductRequest(BaseModel):
+    """
+    Modelo para las solicitudes de creación de producto
+    """
     id: str | None = None
     name: str
     description: str
     stock: int
     active: bool = True
 
-# Modelo para las solicitudes de actualización de producto
 class UpdateProductRequest(BaseModel):
+    """
+    Modelo para las solicitudes de actualización de producto
+    """
     name: str | None = None
     description: str | None = None
     stock: int | None = None
     active: bool | None = None
 
-# Modelo para las solicitudes de actualización de stock
 class UpdateStockRequest(BaseModel):
+    """
+    Modelo para las solicitudes de actualización de stock
+    """
     quantity: int
 
-# Modelo para las respuestas de producto (respuesta del servicio al cliente)
 class ProductResponse(BaseModel):
+    """
+    Modelo para las respuestas de producto (respuesta del servicio al cliente)
+    """
     id: str
     name: str
     description: str

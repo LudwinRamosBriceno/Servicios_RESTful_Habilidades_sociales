@@ -1,3 +1,4 @@
+# Despliegue de la API de ordenes (publica pedido.creado).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -19,12 +20,10 @@ spec:
           ports:
             - containerPort: 8000
           env:
-            - name: USERS_SERVICE_URL
-              value: http://users-service:8001
-            - name: PRODUCTS_SERVICE_URL
-              value: http://products-service:8002
-            - name: NOTIFICATIONS_SERVICE_URL
-              value: http://notifications-service:8003
+            # Broker RabbitMQ para publicar/consumir eventos.
+            - name: RABBITMQ_URL
+              value: amqp://guest:guest@rabbitmq:5672/
+            # Configuracion de BD y JWT.
             - name: DATABASE_URL
               value: postgresql+psycopg2://postgres@orders-db:5432/orders_db
             - name: JWT_SECRET_KEY
@@ -32,6 +31,7 @@ spec:
             - name: JWT_ISSUER
               value: auth-service
 ---
+# Servicio interno del cluster para orders-service.
 apiVersion: v1
 kind: Service
 metadata:

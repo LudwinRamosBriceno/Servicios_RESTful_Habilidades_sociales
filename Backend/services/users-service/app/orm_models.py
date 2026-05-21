@@ -5,7 +5,9 @@ from .db import Base
 
 
 class UserORM(Base):
-    """Entidad ORM que mapea la tabla users en PostgreSQL."""
+    """
+    Entidad ORM que mapea la tabla users en PostgreSQL.
+    """
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)

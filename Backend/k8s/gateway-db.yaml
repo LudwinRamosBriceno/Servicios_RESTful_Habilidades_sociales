@@ -1,8 +1,8 @@
-# Reclamo de volumen persistente para la BD de usuarios.
+# Reclamo de volumen persistente para la BD del gateway.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: users-db-pvc
+  name: gateway-db-pvc
 spec:
   accessModes:
     - ReadWriteOnce
@@ -11,23 +11,23 @@ spec:
       storage: 1Gi
   storageClassName: standard
 ---
-# Despliegue de Postgres para usuarios.
+# Despliegue de Postgres para el gateway.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: users-db
+  name: gateway-db
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: users-db
+      app: gateway-db
   template:
     metadata:
       labels:
-        app: users-db
+        app: gateway-db
     spec:
       containers:
-        - name: users-db
+        - name: gateway-db
           image: postgres:18
           imagePullPolicy: IfNotPresent
           ports:
@@ -35,29 +35,29 @@ spec:
           env:
             # Configuracion inicial de Postgres.
             - name: POSTGRES_DB
-              value: users_db
+              value: gateway_db
             - name: POSTGRES_USER
-              value: users_user
+              value: gateway_user
             - name: POSTGRES_PASSWORD
-              value: users_pass
+              value: gateway_pass
             - name: PGDATA
               value: /var/lib/postgresql/data/pgdata
           volumeMounts:
-            - name: users-db-storage
+            - name: gateway-db-storage
               mountPath: /var/lib/postgresql/data
       volumes:
-        - name: users-db-storage
+        - name: gateway-db-storage
           persistentVolumeClaim:
-            claimName: users-db-pvc
+            claimName: gateway-db-pvc
 ---
-# Servicio interno del cluster para la BD de usuarios.
+# Servicio interno del cluster para la BD del gateway.
 apiVersion: v1
 kind: Service
 metadata:
-  name: users-db
+  name: gateway-db
 spec:
   selector:
-    app: users-db
+    app: gateway-db
   ports:
     - protocol: TCP
       port: 5432

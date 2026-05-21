@@ -58,21 +58,3 @@ class OrderResult(BaseModel):
     skillPoints: int
     createdAt: str
 
-
-class UserDTO(BaseModel):
-    """
-    Modelo de datos para representar un usuario.
-    """
-    id: str
-    name: str
-    email: str
-
-
-class ProductDTO(BaseModel):
-    """
-    Modelo de datos para representar un producto.
-    """
-    id: str
-    name: str
-    stock: int
-

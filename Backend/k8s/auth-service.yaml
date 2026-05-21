@@ -1,3 +1,4 @@
+# Despliegue del servicio de auth (login + emision JWT).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -18,9 +19,34 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8004
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8004
+            failureThreshold: 30
+            periodSeconds: 2
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8004
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8004
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 3
           env:
+            # URL del users-service para verificacion de credenciales.
             - name: USERS_SERVICE_URL
               value: http://users-service:8001
+            # Broker RabbitMQ (reservado para futuros eventos de auth).
+            - name: RABBITMQ_URL
+              value: amqp://guest:guest@rabbitmq:5672/
+            # Configuracion JWT.
             - name: JWT_SECRET_KEY
               value: dev-secret
             - name: JWT_ISSUER
@@ -28,6 +54,7 @@ spec:
             - name: JWT_EXPIRES_SECONDS
               value: "3600"
 ---
+# Servicio interno del cluster para auth-service.
 apiVersion: v1
 kind: Service
 metadata:

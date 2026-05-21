@@ -6,29 +6,46 @@ from sqlalchemy.exc import ProgrammingError
 
 from .models import CreateProductRequest, Product, ProductResponse, UpdateProductRequest, UpdateStockRequest
 from .repository import ProductRepository
+from .messaging import publish_event
 
+# Eventos de dominio para el flujo EDA
+EVENT_ORDER_CREATED = "pedido.creado" 
+EVENT_INVENTORY_CONFIRMED = "inventario.confirmado"
+EVENT_INVENTORY_REJECTED = "inventario.rechazado"
 
+# Configuración de logging para el servicio de productos
 logger = logging.getLogger(__name__)
 
-# Servicio de productos con logica de negocio
 class ProductService:
+    """
+    Servicio de productos con logica de negocio relacionada con la gestión de productos y validación de inventario.
+    """
     def __init__(self, repository: ProductRepository) -> None:
+        """
+        Inicializa el servicio de productos.
+        """
         self._repository = repository # instancia del repositorio para acceder a la base de datos
         self._seed_products() # Se colocan en la base de datos productos de prueba al iniciar el servicio
 
-    # Metodo para listar todos los productos
     def list_products(self) -> list[ProductResponse]:
+        """
+        Metodo para listar todos los productos disponibles en la base de datos, incluso aquellos sin stock.
+        """
         return [self._to_response(product) for product in self._repository.find_all()]
 
-    # Metodo para obtener un producto por su id
     def get_product(self, product_id: str) -> ProductResponse:
+        """
+        Metodo para obtener un producto por su id. Si el producto no existe, se lanza una excepcion HTTP 404.
+        """
         product = self._repository.find_by_id(product_id)
         if not product:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
         return self._to_response(product)
 
-    # Metodo para crear un nuevo producto
     def create_product(self, payload: CreateProductRequest) -> ProductResponse:
+        """
+        Metodo para crear un nuevo producto en la base de datos. Si el ID ya existe, se actualiza el producto existente.
+        """
         product_id = payload.id or f"hab_{uuid.uuid4().hex[:6]}"
         product = Product(
             id=product_id,
@@ -40,8 +57,10 @@ class ProductService:
         self._repository.save(product)
         return self._to_response(product)
 
-    # Metodo para actualizar un producto existente
     def update_product(self, product_id: str, payload: UpdateProductRequest) -> ProductResponse:
+        """
+        Metodo para actualizar un producto existente por su id. Si el producto no existe, se lanza una excepcion HTTP 404.
+        """
         product = self._repository.find_by_id(product_id)
         if not product:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
@@ -58,16 +77,22 @@ class ProductService:
         self._repository.save(product)
         return self._to_response(product)
 
-    # Metodo para eliminar un producto por su id
     def delete_product(self, product_id: str) -> None:
+        """
+        Metodo para eliminar un producto por su id. Si el producto no existe, se lanza una excepcion HTTP 404.
+        """
         product = self._repository.find_by_id(product_id)
         if not product:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
         
         self._repository.delete(product_id)
 
-    # Metodo para descontar stock de un producto
     def discount_stock(self, product_id: str, payload: UpdateStockRequest) -> ProductResponse:
+        """
+        Metodo para descontar stock de un producto por su id. 
+        Si el producto no existe, se lanza una excepcion HTTP 404. 
+        Si la cantidad a descontar es mayor al stock disponible, se lanza una excepcion HTTP 422.
+        """
         product = self._repository.find_by_id(product_id)
         if not product:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
@@ -80,9 +105,87 @@ class ProductService:
         self._repository.save(product)
         return self._to_response(product)
 
-    # Metodo para convertir un objeto de producto a un objeto de respuesta (para el cliente)
+    def process_order_created(self, payload: dict) -> None:
+        """
+        Valida inventario y publica el evento correspondiente.
+        """
+        data = payload.get("data", {})
+        request_id = data.get("requestId")
+        order_id = data.get("orderId")
+        user_id = data.get("userId")
+        product_id = data.get("productId")
+        quantity = data.get("quantity")
+
+        # Si falta información esencial en el payload, se lanza un error 
+        # y se publica un evento de rechazo de inventario.
+        if not order_id or not user_id or not product_id or not isinstance(quantity, int):
+            raise ValueError("Invalid order.created payload")
+
+        # Se busca el producto en la base de datos para validar su disponibilidad y stock.
+        product = self._repository.find_by_id(product_id)
+
+        # Si el producto no existe o no está activo, se publica un evento de rechazo de 
+        # inventario con el motivo y código de estado 404.
+        if not product or not product.active:
+            publish_event(
+                EVENT_INVENTORY_REJECTED,
+                {
+                    "requestId": request_id,
+                    "orderId": order_id,
+                    "userId": user_id,
+                    "productId": product_id,
+                    "quantity": quantity,
+                    "reason": "Producto no disponible",
+                    "statusCode": 404,
+                },
+                correlation_id=order_id,
+            )
+            return
+
+        # Si el stock es insuficiente para cubrir la cantidad solicitada, 
+        # se publica un evento de rechazo de inventario
+        if product.stock < quantity:
+            publish_event(
+                EVENT_INVENTORY_REJECTED,
+                {
+                    "requestId": request_id,
+                    "orderId": order_id,
+                    "userId": user_id,
+                    "productId": product_id,
+                    "quantity": quantity,
+                    "reason": "Stock insuficiente",
+                    "statusCode": 422,
+                },
+                correlation_id=order_id,
+            )
+            return
+
+        # Si el producto está disponible y hay stock suficiente, se descuenta el stock.
+        product.stock -= quantity
+
+        # Se guarda el producto actualizado en la base de datos. 
+        self._repository.save(product)
+
+        # Se publica un evento de confirmación de inventario con los detalles del pedido y el producto.
+        publish_event(
+            EVENT_INVENTORY_CONFIRMED,
+            {
+                "requestId": request_id,
+                "orderId": order_id,
+                "userId": user_id,
+                "productId": product_id,
+                "quantity": quantity,
+                "productName": product.name,
+                "skillPoints": quantity,
+            },
+            correlation_id=order_id,
+        )
+
     @staticmethod
     def _to_response(product: Product) -> ProductResponse:
+        """
+        Metodo para convertir un objeto de producto a un objeto de respuesta (para el cliente).
+        """
         return ProductResponse(
             id=product.id,
             name=product.name,
@@ -91,8 +194,11 @@ class ProductService:
             active=product.active,
         )
 
-    # Metodo para insertar productos de prueba en la base de datos al inciar el servicio
     def _seed_products(self) -> None:
+        """
+        Coloca en la base de datos productos de prueba si no existen. 
+        Si la tabla de productos no existe, se omite el proceso (asumiendo que las migraciones se aplicarán después).
+        """
         try:
             if self._repository.find_all():
                 return

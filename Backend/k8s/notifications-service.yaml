@@ -1,3 +1,4 @@
+# Despliegue del servicio de notificaciones (log de actualizaciones de usuario).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -18,7 +19,12 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8003
+          env:
+            # Broker RabbitMQ para consumo de eventos.
+            - name: RABBITMQ_URL
+              value: amqp://guest:guest@rabbitmq:5672/
 ---
+# Servicio interno del cluster para notifications-service.
 apiVersion: v1
 kind: Service
 metadata:

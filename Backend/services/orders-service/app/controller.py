@@ -1,10 +1,5 @@
-import os
-
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
-from .clients.notification_http_client import NotificationHttpClient
-from .clients.product_http_client import ProductHttpClient
-from .clients.user_http_client import UserHttpClient
 from .auth import AuthenticatedUser, get_current_user
 from .models import OrderRequest
 from .repository import OrderRepository
@@ -13,19 +8,8 @@ from .service import OrderService
 # Enrutador de FastAPI para manejar las rutas relacionadas con las órdenes. 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
-# Configuración de los clientes HTTP para comunicarse con los servicios de usuarios, productos y notificaciones,
-# utilizando las URLs obtenidas de las variables de entorno o valores predeterminados.
-users_service_url = os.getenv("USERS_SERVICE_URL", "http://users-service:8001")
-products_service_url = os.getenv("PRODUCTS_SERVICE_URL", "http://products-service:8002")
-notifications_service_url = os.getenv("NOTIFICATIONS_SERVICE_URL", "http://notifications-service:8003")
-
-# Inicialización del servicio de órdenes, proporcionando el repositorio y los clientes HTTP configurados.
-service = OrderService(
-    repository=OrderRepository(),
-    user_client=UserHttpClient(users_service_url),
-    product_client=ProductHttpClient(products_service_url),
-    notification_client=NotificationHttpClient(notifications_service_url),
-)
+# Inicialización del servicio de órdenes con su repositorio.
+service = OrderService(repository=OrderRepository())
 
 @router.post("")
 def create_order(
