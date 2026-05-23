@@ -10,9 +10,14 @@ export function OrdersView({ skills, preSelectedSkillId, onPlaceOrder, addToast 
 
   // Si desde el catálogo se preselecciona una habilidad, actualizar el estado local para reflejarlo.
   useEffect(() => {
-    if (preSelectedSkillId) {
+    let cancelled = false
+    queueMicrotask(() => {
+      if (cancelled || !preSelectedSkillId) return
       setSelectedSkillId(preSelectedSkillId)
       setPoints(1)
+    })
+    return () => {
+      cancelled = true
     }
   }, [preSelectedSkillId])
 
@@ -59,7 +64,7 @@ export function OrdersView({ skills, preSelectedSkillId, onPlaceOrder, addToast 
       const result = await onPlaceOrder(selectedSkillId, points)
       const successMessage =
         result?.message ||
-        `Pedido realizado! Has adquirido ${points} punto${points > 1 ? 's' : ''} de ${skill.name}.`
+        `Pedido enviado. Recibiras la confirmacion por SSE para ${skill.name}.`
       addToast('success', successMessage)
       setPoints(1)
     } catch {
