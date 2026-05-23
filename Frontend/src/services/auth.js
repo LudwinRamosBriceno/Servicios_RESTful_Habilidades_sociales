@@ -1,5 +1,5 @@
-import { get, post, put, del } from './http'
-import { saveToken } from './token-storage'
+import { get, post } from './http'
+import { saveToken, getClientId } from './token-storage'
 
 // Función para iniciar sesión con email y contraseña
 export async function login(email, password) {
@@ -24,5 +24,7 @@ export function registerUser(name, email, password) {
     if (!name || !email || !password) {
         throw new Error('Error: Todos los campos son obligatorios')
     }
-    return post('/users', { name, email, password })
+    // Para registro anónimo, enviar X-Client-Id según contrato del gateway
+    const clientId = getClientId()
+    return post('/users', { name, email, password }, { headers: { 'X-Client-Id': clientId } })
 }

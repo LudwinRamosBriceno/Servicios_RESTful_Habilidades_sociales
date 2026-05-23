@@ -34,6 +34,12 @@
   }
 }
 
+.toast-item-info {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  border: 1px solid rgba(129, 140, 248, 0.3);
+}
+
 .toast-item-success {
   background-color: var(--success);
   color: var(--success-foreground);
