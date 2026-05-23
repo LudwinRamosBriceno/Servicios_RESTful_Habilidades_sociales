@@ -1,5 +1,6 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useEffect, useState } from 'react'
-import { CheckCircle, XCircle, X } from 'lucide-react'
+import { CheckCircle, XCircle, Info, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import './toast-notifications.css'
 
@@ -11,14 +12,25 @@ function ToastItem({ toast, onDismiss }) {
 
   return (
     <div
-      className={cn('toast-item', toast.type === 'success' ? 'toast-item-success' : 'toast-item-error')}
+      className={cn(
+        'toast-item',
+        toast.className || (
+          toast.type === 'success'
+            ? 'toast-item-success'
+            : toast.type === 'error'
+            ? 'toast-item-error'
+            : 'toast-item-info'
+        )
+      )}
       role="alert"
       aria-live="polite"
     >
       {toast.type === 'success' ? (
         <CheckCircle className="toast-item-icon" />
-      ) : (
+      ) : toast.type === 'error' ? (
         <XCircle className="toast-item-icon" />
+      ) : (
+        <Info className="toast-item-icon" />
       )}
       <span className="toast-item-message">{toast.message}</span>
       <button
@@ -31,7 +43,7 @@ function ToastItem({ toast, onDismiss }) {
     </div>
   )
 }
-
+  
 export function ToastContainer({ toasts, onDismiss }) {
   return (
     <div className="toast-container" aria-label="Notifications">
@@ -46,9 +58,9 @@ export function ToastContainer({ toasts, onDismiss }) {
 export function useToasts() {
   const [toasts, setToasts] = useState([])
 
-  const addToast = (type, message) => {
+  const addToast = (type, message, options = {}) => {
     const id = crypto.randomUUID()
-    setToasts((prev) => [...prev, { id, type, message }])
+    setToasts((prev) => [...prev, { id, type, message, ...options }])
   }
 
   const dismiss = (id) => {
