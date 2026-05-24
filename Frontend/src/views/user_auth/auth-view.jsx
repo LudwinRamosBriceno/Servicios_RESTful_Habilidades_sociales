@@ -66,6 +66,7 @@ export function AuthView({ onLogin, onRegister, addToast }) {
     try {
       await onRegister(form.name, form.email, form.password)
       setForm({ email: '', password: '', name: '', confirmPassword: '' })
+      setMode('login')
     } catch {
       // El manejo de errores se centraliza en App.
     }

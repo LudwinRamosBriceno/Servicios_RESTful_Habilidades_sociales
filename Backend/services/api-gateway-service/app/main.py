@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from typing import Any, Dict
 
 import httpx
-import jwt
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
 from fastapi.responses import JSONResponse, StreamingResponse
 
@@ -43,9 +42,6 @@ repo = RequestRepository()
 
 # Configuracion del servicio de autenticacion y JWT.
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://auth-service:8004")
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev-secret")
-JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
-JWT_ISSUER = os.getenv("JWT_ISSUER", "auth-service")
 
 @dataclass
 class SseSubscriber:
@@ -113,36 +109,56 @@ def _notify_subscribers(key: str, event: dict) -> None:
         subscriber.loop.call_soon_threadsafe(_enqueue)
 
 
-def _decode_token(token: str) -> dict:
-    """
-    Valid a JWT y devuelve su payload.
-    """
+async def _validate_session(request: Request) -> dict | None:
+    # Validación centralizada: el gateway depende del auth-service para sesiones.
+    cookie_header = request.headers.get("cookie")
+    if not cookie_header:
+        return None
+
     try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-    except jwt.ExpiredSignatureError as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expirado") from exc
-    except jwt.PyJWTError as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token invalido") from exc
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get(
+                f"{AUTH_SERVICE_URL}/session",
+                headers={"cookie": cookie_header},
+            )
+    except httpx.TimeoutException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Servicio de autenticacion no respondio a tiempo",
+        ) from exc
+    except httpx.RequestError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Servicio de autenticacion no disponible: {exc}",
+        ) from exc
 
-    if payload.get("iss") != JWT_ISSUER:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token invalido")
+    if response.status_code == status.HTTP_401_UNAUTHORIZED:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Sesion invalida")
+    if response.status_code >= 500:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Servicio de autenticacion no disponible",
+        )
 
-    return payload
+    try:
+        return response.json()
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Respuesta invalida del servicio de autenticacion",
+        )
 
 
-def get_identity(
-    authorization: str | None = Header(default=None),
+async def get_identity(
+    request: Request,
     x_client_id: str | None = Header(default=None, alias="X-Client-Id"),
 ) -> dict:
     """
-    Determina identidad por JWT o por client id.
+    Determina identidad por sesión o por client id.
     """
-    if authorization:
-        scheme, _, token = authorization.partition(" ")
-        if scheme.lower() != "bearer" or not token:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token requerido")
-        payload = _decode_token(token)
-        return {"user_id": payload.get("sub"), "client_id": None}
+    session = await _validate_session(request)
+    if session and session.get("user_id"):
+        return {"user_id": session.get("user_id"), "client_id": None}
 
     if x_client_id:
         return {"user_id": None, "client_id": x_client_id}
@@ -185,7 +201,75 @@ async def login(payload: dict) -> JSONResponse:
     except ValueError:
         content = {"detail": response.text or "Respuesta invalida del servicio de autenticacion"}
 
+    gateway_response = JSONResponse(status_code=response.status_code, content=content)
+    for value in response.headers.get_list("set-cookie"):
+        gateway_response.headers.append("set-cookie", value)
+    return gateway_response
+
+
+@app.get("/api/auth/session")
+async def session(request: Request) -> JSONResponse:
+    """
+    Proxy para validar la sesión actual.
+    """
+    cookie_header = request.headers.get("cookie", "")
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get(
+                f"{AUTH_SERVICE_URL}/session",
+                headers={"cookie": cookie_header},
+            )
+    except httpx.TimeoutException:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"detail": "Servicio de autenticacion no respondio a tiempo"},
+        )
+    except httpx.RequestError as exc:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"detail": f"Servicio de autenticacion no disponible: {exc}"},
+        )
+
+    try:
+        content = response.json()
+    except ValueError:
+        content = {"detail": response.text or "Respuesta invalida del servicio de autenticacion"}
+
     return JSONResponse(status_code=response.status_code, content=content)
+
+
+@app.post("/api/auth/logout")
+async def logout(request: Request) -> JSONResponse:
+    """
+    Proxy para cerrar sesión.
+    """
+    cookie_header = request.headers.get("cookie", "")
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.post(
+                f"{AUTH_SERVICE_URL}/logout",
+                headers={"cookie": cookie_header},
+            )
+    except httpx.TimeoutException:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"detail": "Servicio de autenticacion no respondio a tiempo"},
+        )
+    except httpx.RequestError as exc:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"detail": f"Servicio de autenticacion no disponible: {exc}"},
+        )
+
+    try:
+        content = response.json()
+    except ValueError:
+        content = {"detail": response.text or "Respuesta invalida del servicio de autenticacion"}
+
+    gateway_response = JSONResponse(status_code=response.status_code, content=content)
+    for value in response.headers.get_list("set-cookie"):
+        gateway_response.headers.append("set-cookie", value)
+    return gateway_response
 
 
 @app.get("/api/events")

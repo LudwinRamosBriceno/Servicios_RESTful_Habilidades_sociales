@@ -5,7 +5,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 const DEFAULT_SSE_URL = `${API_BASE_URL}/events`
 
 // Hook para manejar la comunicación asíncrona (SSE) entre el frontend y el backend, ademas del estado de solicitudes pendientes
-export function useEventBridge({ enabled, token, addToast, setSkills, setUser, refreshUserData, refreshSkills }) {
+export function useEventBridge({ enabled, addToast, setSkills, setUser, refreshUserData, refreshSkills }) {
     
     const [pendingRequests, setPendingRequests] = useState([])      // Lista de solicitudes pendientes realizadas por el frontend y esperan respuesta
 
@@ -45,8 +45,8 @@ export function useEventBridge({ enabled, token, addToast, setSkills, setUser, r
     // Función para iniciar el polling del estado de una solicitud asíncrona, se llama cuando se registra una nueva solicitud pendiente
     const pollRequestStatus = useCallback((requestId, type) => {
         
-        // Si no hay requestId, token o la solicitud ya fue resuelta, no hace nada
-        if (!requestId || !token || resolvedRequestIdsRef.current.has(requestId)) return
+        // Si no hay requestId o la solicitud ya fue resuelta, no hace nada
+        if (!requestId || resolvedRequestIdsRef.current.has(requestId)) return
 
         // Función recursiva para programar intentos de polling con retraso incremental (termina después de 10 intentos o si la solicitud se resuelve)
         const schedulePoll = (attempt) => {
@@ -61,9 +61,7 @@ export function useEventBridge({ enabled, token, addToast, setSkills, setUser, r
             try {
                 // Realiza una petición al backend para obtener el estado de la solicitud (NO HAY ALGO EN EL BACKEND RECIBA ESTA CONSULTA O SI?)
                 const response = await fetch(`${API_BASE_URL}/requests/${requestId}`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
+                    credentials: 'include',
                 })
                 // Si la respuesta es exitosa, procesa el payload como se haría con un evento SSE normal
                 if (response.ok) {
@@ -92,7 +90,7 @@ export function useEventBridge({ enabled, token, addToast, setSkills, setUser, r
         }
         // Inicia el siguiente intento de polling
         schedulePoll(1)
-    }, [token])
+    }, [])
 
     // Función para registrar una nueva solicitud pendiente, se llama cuando el frontend envía una solicitud asíncrona al backend
     const registerPendingRequest = useCallback((response, type) => {
@@ -208,7 +206,7 @@ export function useEventBridge({ enabled, token, addToast, setSkills, setUser, r
     useEffect(() => { handlePayloadRef.current = handlePayload }, [handlePayload])
 
     useEffect(() => {
-        if (!enabled || !token) return
+        if (!enabled) return
 
         const controller = new AbortController()
 
@@ -218,9 +216,8 @@ export function useEventBridge({ enabled, token, addToast, setSkills, setUser, r
                 // Conecta al backend usando fetchEventSource para recibir eventos SSE
                 await fetchEventSource(DEFAULT_SSE_URL, {
                     method: 'GET',
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
+                    // La cookie de sesión se coloca automáticamente.
+                    credentials: 'include',
                     signal: controller.signal,
 
                     // Maneja la respuesta de conexión para verificar que es un stream SSE válido
@@ -259,7 +256,7 @@ export function useEventBridge({ enabled, token, addToast, setSkills, setUser, r
         return () => {
             controller.abort()
         }
-    }, [enabled, token])
+    }, [enabled])
 
     return { pendingRequests, registerPendingRequest, clearPendingRequests }
 }

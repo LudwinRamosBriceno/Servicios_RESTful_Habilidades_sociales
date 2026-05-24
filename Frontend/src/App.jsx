@@ -6,22 +6,11 @@ import { ProfileView } from '@/views/user_profile/profile-view'
 import { CatalogView } from '@/views/skills_catalog/catalog-view'
 import { OrdersView } from '@/views/skills_orders/orders-view'
 import { useEventBridge } from '@/hooks/use-event-bridge'
-import { login, registerUser } from '@/services/auth'
+import { login, registerUser, getSession, logout as logoutSession } from '@/services/auth'
 import { getUserById } from '@/services/user'
 import { getAllSkills } from '@/services/products'
 import { orderSkill } from '@/services/orders'
-import { getToken, clearToken } from '@/services/token-storage'
 
-
-// Función para decodificar el payload de un JWT sin verificar la firma, para extraer datos como el nombre del usuario y la expiración.
-function parseJwtPayload(token) {
-  try {
-    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
-    return JSON.parse(atob(base64))
-  } catch {
-    return null
-  }
-}
 
 function App() {
 
@@ -34,7 +23,6 @@ function App() {
   const [skills, setSkills] = useState([])                                // Catálogo de habilidades cargado desde el backend 
   const [preSelectedSkillId, setPreSelectedSkillId] = useState(undefined) // ID de habilidad preseleccionada al navegar desde el catálogo a órdenes
 
-  const [token, setToken] = useState(() => getToken())                    // Token de autenticación JWT, inicializado desde el almacenamiento local
   const { toasts, addToast, dismiss } = useToasts()                       // Manejo de notificaciones tipo toast para mostrar mensajes al usuario
 
 
@@ -91,7 +79,6 @@ function App() {
   // Configura el SSE para recibir actualizaciones en tiempo real
   const { registerPendingRequest, clearPendingRequests } = useEventBridge({
     enabled: isAuthenticated,
-    token,
     addToast: stableAddToast,
     setSkills: stableSetSkills,
     setUser: stableSetUser,
@@ -104,43 +91,28 @@ function App() {
     registerPendingRequestRef.current = registerPendingRequest
   }, [registerPendingRequest])
 
-  // *** Intenta de restaurar la sesión al cargar la app, verificando el token guardado para evitar usar un token expirado o inválido. 
-  // Si el token es válido, restaura la autenticación y muestra el nombre en la navbar de inmediato (los datos completos llegarán por SSE).
+  // *** Intenta restaurar la sesión al cargar la app, consultando al backend.
   useEffect(() => {
-    const restoreSession = () => {
-      const savedToken = getToken()
-      if (!savedToken) return
+    const restoreSession = async () => {
+      try {
+        // La sesión se valida en el servidor usando la cookie HttpOnly.
+        const session = await getSession()
+        if (!session?.user_id) return
 
-      const claims = parseJwtPayload(savedToken)
-      if (!claims) {
-        clearToken()
-        return
+        const savedView = localStorage.getItem('current_view')
+        const nextView = ['profile', 'catalog', 'orders'].includes(savedView) ? savedView : 'catalog'
+
+        setIsAuthenticated(true)
+        setCurrentView(nextView)
+        setUser({ id: session.user_id, name: session.name })
+        console.log('Sesión restaurada. Cargando datos completos...')
+      } catch {
+        // Si no hay sesión válida, continúa como no autenticado.
+      } finally {
+        setIsRestoringSession(false)
       }
-
-      // Verificar que el token no haya expirado
-      const nowSeconds = Math.floor(Date.now() / 1000)
-      if (claims.exp && claims.exp < nowSeconds) {
-        console.warn('Token expirado, cerrando sesión.')
-        clearToken()
-        return
-      }
-
-      // Restaurar con datos del JWT — los datos completos llegarán por SSE
-      const savedView = localStorage.getItem('current_view')
-      const nextView = ['profile', 'catalog', 'orders'].includes(savedView) ? savedView : 'catalog'
-
-      setToken(savedToken)
-      setIsAuthenticated(true)
-      setCurrentView(nextView)
-      // Establecer usuario parcial para que la navbar muestre el nombre de inmediato
-      setUser({ id: claims.sub, name: claims.name })
-      console.log('Sesión restaurada. Cargando datos completos...')
     }
-    try {
-      restoreSession()
-    } finally {
-      setIsRestoringSession(false)
-    }
+    restoreSession()
   }, [])
 
   // Guarda la vista actual en localStorage para restaurarla después
@@ -173,7 +145,7 @@ function App() {
 
   // Carga los datos del usuario cuando se autentica o cambia el user.id.
   useEffect(() => {
-    if (!isAuthenticated || !user?.id || !token) return
+    if (!isAuthenticated || !user?.id) return
 
     const fetchUserData = async () => {
       try {
@@ -191,25 +163,16 @@ function App() {
 
   // ----- Para acciones de usuario -----
 
-  // Maneja el inicio de sesión, guardando el token y mostrando el nombre en la navbar de inmediato.
+  // Maneja el inicio de sesión, mostrando el nombre en la navbar de inmediato.
   const handleLogin = async (email, password) => {
     try {
-      // Realizar login y obtener token
+      // Realizar login
       const loginResponse = await login(email, password)
 
-      // Verificar que se recibió un token de acceso válido
-      if (!loginResponse.access_token) {
-        throw new Error('No se recibió un token de acceso válido.')
-      }
-
-      // Obtiene el nombre para mostrar el nombre en la navbar inmediatamente
-      const claims = parseJwtPayload(loginResponse.access_token)
-
-      setToken(loginResponse.access_token)
       setIsAuthenticated(true)
       setCurrentView('profile')
       // Usuario parcial para que la navbar muestre el nombre antes de que llegue el SSE
-      setUser({ id: loginResponse.user_id, name: claims?.name })
+      setUser({ id: loginResponse.user_id, name: loginResponse.name })
 
       stableAddToast('success', '¡Bienvenido! Cargando tu información...')
     } catch (error) {
@@ -251,10 +214,13 @@ function App() {
   }
 
   // Controla el cierre de sesión del usuario, limpiando estado y localStorage
-  const handleLogout = () => {
-    clearToken()
+  const handleLogout = async () => {
+    try {
+      await logoutSession()
+    } catch {
+      // Si falla el logout remoto, limpiamos el estado local igual.
+    }
     localStorage.removeItem('current_view')
-    setToken(null)
     setIsAuthenticated(false)
     setUser(null)
     setSkills([])
