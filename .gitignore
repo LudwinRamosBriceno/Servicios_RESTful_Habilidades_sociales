@@ -1,3 +1,7 @@
 
 venv
 .pytest_cache/
+__pycache__/
+*.pyc
+
+# El archivo requirements.txt contiene las dependencias del entorno virtual (necesarias para poder correr los tests del backend)

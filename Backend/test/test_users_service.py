@@ -38,3 +38,5 @@ class TestUserService(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+# Ejecutar prueba: pytest Backend/test/test_users_service.py

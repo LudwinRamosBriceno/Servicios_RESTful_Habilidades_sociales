@@ -37,3 +37,5 @@ class TestOrdersService(unittest.TestCase):
 
 if __name__ == '__main__':
     pass
+
+# Ejecutar prueba: pytest Backend/test/test_orders_service.py
