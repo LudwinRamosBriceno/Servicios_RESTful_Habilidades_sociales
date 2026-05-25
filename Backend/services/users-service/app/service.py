@@ -3,7 +3,7 @@ import os
 
 from fastapi import HTTPException, status
 
-from .models import (
+from models import (
     AddSkillRequest,
     AddSkillResponse,
     AuthenticateUserRequest,
@@ -14,9 +14,9 @@ from .models import (
     UserListItemResponse,
     UserResponse,
 )
-from .repository import UserRepository
-from .clients.product_http_client import ProductHttpClient
-from .messaging import publish_event
+from repository import UserRepository
+from clients.product_http_client import ProductHttpClient
+from messaging import publish_event
 
 # Eventos de dominio para el flujo EDA
 EVENT_INVENTORY_CONFIRMED = "inventario.confirmado"
@@ -187,7 +187,7 @@ class UserService:
         """
         Mapear el modelo interno a DTO de respuesta para la API.
         """
-        from .models import UserSkill
+        from models import UserSkill
         skills_list = [
             UserSkill(skillId=skill_id, skillName=self._resolve_skill_name(skill_id), skillPoints=points)
             for skill_id, points in user.skills.items()

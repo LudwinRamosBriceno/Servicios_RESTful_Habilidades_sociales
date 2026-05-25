@@ -1,7 +1,7 @@
 import httpx
 from fastapi import HTTPException, status
 
-from ..models import AuthenticatedUser
+from models import AuthenticatedUser
 
 
 class UserHttpClient:

@@ -4,9 +4,9 @@ import logging
 from fastapi import HTTPException, status
 from sqlalchemy.exc import ProgrammingError
 
-from .models import CreateProductRequest, Product, ProductResponse, UpdateProductRequest, UpdateStockRequest
-from .repository import ProductRepository
-from .messaging import publish_event
+from models import CreateProductRequest, Product, ProductResponse, UpdateProductRequest, UpdateStockRequest
+from repository import ProductRepository
+from messaging import publish_event
 
 # Eventos de dominio para el flujo EDA
 EVENT_ORDER_CREATED = "pedido.creado" 

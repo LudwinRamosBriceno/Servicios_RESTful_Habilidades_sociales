@@ -4,7 +4,6 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .db import SessionLocal
 from .models import RequestRecord, RequestStatus, utc_now_iso
 
 
@@ -12,8 +11,8 @@ class RequestRepository:
     """
     Repositorio para persistir el estado de solicitudes del gateway.
     """
-    def __init__(self) -> None:
-        self._session_factory = SessionLocal
+    def __init__(self, session_factory):
+        self._session_factory = session_factory
 
     def create_request(self, request_id: str, event_type: str, user_id: str | None, client_id: str | None) -> None:
         """Crea un registro en estado pendiente para una solicitud."""

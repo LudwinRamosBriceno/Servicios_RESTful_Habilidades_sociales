@@ -3,8 +3,8 @@ from datetime import datetime, timedelta, timezone
 
 import jwt
 
-from .models import AuthenticatedUser, LoginRequest, TokenResponse
-from .repository import AuthRepository
+from models import AuthenticatedUser, LoginRequest, TokenResponse
+from repository import AuthRepository
 
 
 class AuthService:
