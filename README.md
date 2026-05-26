@@ -12,7 +12,6 @@ Plataforma de microservicios REST para gestionar habilidades sociales como produ
 - PostgreSQL
 - React + Vite y Javascript
 - SQLAlchemy y Alembic
-- Nginx
 
 ## Diagramas C4 y secuencia
 
@@ -28,6 +27,12 @@ Plataforma de microservicios REST para gestionar habilidades sociales como produ
 
 ### Diagrama de Secuencia
 <img src="Diagramas/Diagrama%20de%20Secuencia.svg" alt="Diagrama de Secuencia" width="700px" />
+
+### Diagrama de arquitectura EDA
+
+El siguiente link lo redirige al mapa de Producers y Consumers y a la Topología de Conexiones especificadas por servicio.
+
+[Mapeo EDA](/Diagramas/Mapeo_EDA.md)
 
 ---
 
