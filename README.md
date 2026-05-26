@@ -12,7 +12,6 @@ Plataforma de microservicios REST para gestionar habilidades sociales como produ
 - PostgreSQL
 - React + Vite y Javascript
 - SQLAlchemy y Alembic
-- Nginx
 
 ## Diagramas C4 y secuencia
 
@@ -27,7 +26,14 @@ Plataforma de microservicios REST para gestionar habilidades sociales como produ
 <img src="Diagramas/Diagrama%20de%20Componentes.svg" alt="Diagrama de Componentes" width="700px" />
 
 ### Diagrama de Secuencia
-<img src="Diagramas/Diagrama%20de%20Secuencia.svg" alt="Diagrama de Secuencia" width="700px" />
+<img src="Diagramas/Diagramas Proyecto 2 EDA - Diagrama de Secuencia.svg" alt="Diagrama de Secuencia" width="700px" />
+
+
+### Diagrama de arquitectura EDA
+
+El siguiente link lo redirige al mapa de Producers y Consumers y a la Topología de Conexiones especificadas por servicio.
+
+[Mapeo EDA](/Diagramas/Mapeo_EDA.md)
 
 ---
 
@@ -153,6 +159,8 @@ Esquema utilizado tanto para crear una orden como para actualizarla _(obligatori
 - [ADR 001 — Arquitectura híbrida con API Gateway](#adr-001)
 - [ADR 002 — Kubernetes (Minikube) para orquestación de contenedores](#adr-002)
 - [ADR 003 — Bases de datos separadas con volúmenes dedicados](#adr-003)
+- [ADR 004 — Arquitectura orientada completamente a eventos para comunicación entre servicios](#adr-004)
+- [ADR 005 — Uso de cookie `HttpOnly` para `session_id` e invalidación de sesiones tras caída o reinicio del `auth-service`](#adr-005)
 
 ---
 
@@ -272,4 +280,85 @@ Los datos se almacenarán en el volumen montado en una ruta concreta dentro de c
 
 - Implica mayor consumo de recursos físicos.
 - Si el volumen se corrompe, los datos de las tres bases de datos se pierden (a menos que se configuren backups).
+
+---
+
+## ADR 004
+
+### Arquitectura orientada completamente a eventos para comunicación entre servicios
+
+**Estado:** `Accepted`
+
+### Contexto
+
+Durante la fase de diseño del proyecto, se realizó una consulta formal sobre el alcance esperado del uso de mensajería y eventos dentro de la arquitectura de microservicios. La interpretación confirmada inicialmente indicó que la comunicación entre servicios debía implementarse utilizando eventos y colas de mensajería como mecanismo principal de interacción.
+
+Con base en dicha aclaración, el sistema fue diseñado bajo un enfoque completamente orientado a eventos, incluyendo operaciones tradicionalmente síncronas como consultas de información (`GET`), las cuales fueron modeladas mediante intercambio de eventos y respuestas asincrónicas.
+
+Posteriormente, durante la revisión en vivo del proyecto, se aclaró que las operaciones `GET` no necesariamente requerían implementarse mediante eventos y que podían resolverse mediante comunicación HTTP síncrona. Sin embargo, dado que la arquitectura ya se encontraba implementada y funcional bajo el modelo orientado a eventos, se decidió mantener el diseño original justificando sus beneficios arquitectónicos y académicos.
+
+### Decisión
+
+Toda la comunicación entre microservicios se implementará mediante RabbitMQ y eventos asincrónicos, incluyendo:
+
+- Operaciones de creación y actualización (`POST`, `PUT`, etc.).
+- Consultas de información equivalentes a operaciones `GET`.
+- Intercambio de respuestas mediante colas de respuesta temporales o patrones request-response asincrónicos.
+
+El API Gateway actúa como punto de entrada único y coordina la publicación y recepción de eventos hacia los servicios internos.
+
+### Consecuencias
+
+#### Positivas
+
+- Se mantiene una arquitectura uniforme basada completamente en eventos.
+- Se reduce el acoplamiento directo entre servicios.
+- Permite demostrar el uso práctico de mensajería asincrónica más allá de eventos simples.
+- Facilita tolerancia a fallos temporales mediante desacoplamiento temporal.
+- Cumple con la interpretación inicial validada de los requerimientos del proyecto.
+
+#### Negativas
+
+- Incrementa considerablemente la complejidad para operaciones simples de consulta.
+- Introduce mayor latencia respecto a consultas HTTP directas.
+- El patrón request-response asincrónico requiere manejo adicional de correlación y timeouts.
+- No representa la implementación más común para operaciones `GET` en arquitecturas de microservicios tradicionales.
+- La depuración y trazabilidad de consultas resulta más compleja.
+
+---
+
+## ADR 005
+
+### Uso de cookie `HttpOnly` para `session_id` e invalidación de sesiones tras caída o reinicio del `auth-service`
+
+**Estado:** `Accepted`
+
+### Contexto
+
+Se detecto que el manejo de sesiones basado en tokens expuestos en el cliente podia ser vulnerable ante acceso por scripts en el navegador. Ademas, las sesiones activas se mantenian en memoria dentro del `auth-service`, lo que generaba inconsistencias cuando el servicio se detenia o reiniciaba: el cliente conservaba un token aparentemente valido, pero el servidor ya no tenia su sesion registrada.
+
+Para mitigar ambos problemas, se cambio el mecanismo de autenticacion a un identificador de sesion persistido en una cookie `HttpOnly`, y se definio que las sesiones deben invalidarse si el `auth-service` se reinicia o se cae, ya que el almacenamiento de sesiones no es persistente.
+
+### Decisión
+
+- El identificador de sesion se entrega al cliente en una cookie `HttpOnly` (`session_id`).
+- El cliente ya no recibe ni almacena el token de sesion en almacenamiento local.
+- Las sesiones activas se mantienen en memoria del `auth-service`.
+- Si el `auth-service` se reinicia o se cae, todas las sesiones se invalidan automaticamente y el usuario debe reautenticarse.
+
+### Consecuencias
+
+#### Positivas
+
+- Se reduce la exposicion del token frente a ataques XSS.
+- Se evita la persistencia de credenciales en el cliente.
+- Se alinea el comportamiento del cliente con la realidad del servidor cuando este se reinicia.
+- Se simplifica el control de sesion desde el `auth-service`.
+
+#### Negativas
+
+- Todas las sesiones se pierden ante reinicios del servicio.
+- No es posible mantener sesiones activas sin un almacenamiento persistente adicional.
+- La experiencia de usuario puede verse afectada en despliegues o fallos del servicio.
+- Se requiere cuidado adicional en ambientes con multiples instancias del `auth-service` si no se comparte el estado.
 - Mayor complejidad de orquestación: se deben crear 3 deployments de bases de datos y 4 servicios (incluyendo el API Gateway).

@@ -3,13 +3,15 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from .auth import AuthenticatedUser, get_current_user
 from .models import OrderRequest
 from .repository import OrderRepository
+from .db import SessionLocal
 from .service import OrderService
 
 # Enrutador de FastAPI para manejar las rutas relacionadas con las órdenes. 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
 # Inicialización del servicio de órdenes con su repositorio.
-service = OrderService(repository=OrderRepository())
+repository = OrderRepository(SessionLocal) # se le pasa la sesión de base de datos al repositorio
+service = OrderService(repository=repository)
 
 @router.post("")
 def create_order(

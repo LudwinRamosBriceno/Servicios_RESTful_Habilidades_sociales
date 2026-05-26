@@ -2,13 +2,15 @@ from fastapi import APIRouter
 
 from .models import AuthenticateUserRequest, AddSkillRequest, CreateUserRequest, UpdateUserRequest, UserListItemResponse
 from .repository import UserRepository
+from .db import SessionLocal
 from .service import UserService
 
 # Enrutador de FastAPI para manejar las rutas relacionadas con los usuarios.
 router = APIRouter(prefix="/users", tags=["users"])
-# Instancia única de servicio para reutilizar la lógica de negocio en todos los endpoints.
-service = UserService(UserRepository())
 
+# Inicialización del servicio de usuarios con su repositorio.
+repository = UserRepository(SessionLocal) # se le pasa la sesión de base de datos al repositorio
+service = UserService(repository=repository)
 
 @router.post("")
 def create_user(payload: CreateUserRequest):

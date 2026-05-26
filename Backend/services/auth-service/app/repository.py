@@ -1,6 +1,5 @@
-from .clients.user_http_client import UserHttpClient
-from .models import AuthenticatedUser
-
+from clients.user_http_client import UserHttpClient
+from models import AuthenticatedUser
 
 class AuthRepository:
     def __init__(self, user_client: UserHttpClient) -> None:
