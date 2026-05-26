@@ -12,10 +12,17 @@ export function AuthView({ onLogin, onRegister, addToast }) {
 
   // Limpiar formulario y visibilidad de contraseñas al cambiar de modo
   useEffect(() => {
-    setForm({ email: '', password: '', name: '', confirmPassword: '' })
-    setShowLoginPassword(false)
-    setShowRegisterPassword(false)
-    setShowConfirmPassword(false)
+    let cancelled = false
+    queueMicrotask(() => {
+      if (cancelled) return
+      setForm({ email: '', password: '', name: '', confirmPassword: '' })
+      setShowLoginPassword(false)
+      setShowRegisterPassword(false)
+      setShowConfirmPassword(false)
+    })
+    return () => {
+      cancelled = true
+    }
   }, [mode])
 
   // Manejar inicio de sesión con credenciales reales.
@@ -59,6 +66,7 @@ export function AuthView({ onLogin, onRegister, addToast }) {
     try {
       await onRegister(form.name, form.email, form.password)
       setForm({ email: '', password: '', name: '', confirmPassword: '' })
+      setMode('login')
     } catch {
       // El manejo de errores se centraliza en App.
     }

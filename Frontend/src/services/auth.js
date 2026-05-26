@@ -1,17 +1,12 @@
-import { get, post, put, del } from './http'
-import { saveToken } from './token-storage'
+import { get, post } from './http'
+import { getClientId } from './token-storage'
 
-// Función para iniciar sesión con email y contraseña
+// Función para iniciar sesión con email y contraseña (cookie HttpOnly).
 export async function login(email, password) {
     if (!email || !password) {
         throw new Error('Error: Email y contraseña son obligatorios')
     }
-    const response = await post('/auth/login', { email, password })
-    // Guardar el token en localStorage
-    if (response.access_token) {
-        saveToken(response.access_token)
-    }
-    return response
+    return post('/auth/login', { email, password })
 }
 
 // Función para obtener la lista de usuarios registrados
@@ -24,5 +19,17 @@ export function registerUser(name, email, password) {
     if (!name || !email || !password) {
         throw new Error('Error: Todos los campos son obligatorios')
     }
-    return post('/users', { name, email, password })
+    // Para registro anónimo, enviar X-Client-Id según contrato del gateway
+    const clientId = getClientId()
+    return post('/users', { name, email, password }, { headers: { 'X-Client-Id': clientId } })
+}
+
+// Función para validar sesión actual (cookie HttpOnly).
+export function getSession() {
+    return get('/auth/session')
+}
+
+// Función para cerrar sesión.
+export function logout() {
+    return post('/auth/logout')
 }

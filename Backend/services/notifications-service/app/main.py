@@ -47,7 +47,8 @@ def start_event_consumers() -> None:
             "[NOTIFICATION] "
             f"order={data.get('orderId')} user={data.get('userId')} "
             f"skill={data.get('productName')} points={data.get('skillPoints')} "
-            "issued_by=events"
+            "issued_by=events",
+            flush=True
         )
 
     start_consumer(

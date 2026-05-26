@@ -1,4 +1,4 @@
-import { get, post, put, del } from './http'
+import { post } from './http'
 
 // Función para realizar un pedido de habilidad
 export function orderSkill(userId, productId, quantity) {

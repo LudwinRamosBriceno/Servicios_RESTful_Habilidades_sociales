@@ -15,10 +15,18 @@ class AuthenticatedUser(BaseModel):
     user_id: str
     name: str
 
-class TokenResponse(BaseModel):
+
+class LoginResponse(BaseModel):
     """
-    Modelo para la respuesta de tokens de autenticación.
+    Modelo para la respuesta de inicio de sesión.
     """
-    access_token: str
-    token_type: str = "bearer"
     user_id: str
+    name: str | None = None
+
+
+class SessionResponse(BaseModel):
+    """
+    Modelo para la validación de sesión.
+    """
+    user_id: str
+    name: str | None = None
