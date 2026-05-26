@@ -159,6 +159,8 @@ Esquema utilizado tanto para crear una orden como para actualizarla _(obligatori
 - [ADR 001 — Arquitectura híbrida con API Gateway](#adr-001)
 - [ADR 002 — Kubernetes (Minikube) para orquestación de contenedores](#adr-002)
 - [ADR 003 — Bases de datos separadas con volúmenes dedicados](#adr-003)
+- [ADR 004 — Arquitectura orientada completamente a eventos para comunicación entre servicios](#adr-004)
+- [ADR 005 — Uso de cookie `HttpOnly` para `session_id` e invalidación de sesiones tras caída o reinicio del `auth-service`](#adr-005)
 
 ---
 
