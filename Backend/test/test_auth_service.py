@@ -10,11 +10,12 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../s
 from repository import AuthRepository
 from service import AuthService
 from models import LoginRequest
+from session_store import create_session
 
 
 class TestAuthService(unittest.TestCase):
     def setUp(self):
-        # Crea un mock del UserHttpClient
+        # Crea un mock del UserHttpClient (cliente HTTP)
         mock_client = MagicMock()
         fake_user = SimpleNamespace(user_id="1", name="testuser")
         mock_client.verify_credentials.return_value = fake_user
@@ -24,12 +25,17 @@ class TestAuthService(unittest.TestCase):
         self.service_login = AuthService(repository_login)
 
     def test_login(self):
-        # Simula un login con credenciales de prueba
-        request_user = LoginRequest(email="test@example.com", password="1234")
-        result = self.service_login.login(request_user)
+        # simula un login con credenciales de prueba
+        request_user = LoginRequest(email="test@example.com", password="1234") # Objeto de solicitud de login
 
-        # Se verifica que el token de acceso se haya generado correctamente
-        self.assertIsNotNone(result.access_token)
+        # se comprueban los datos del inicio de sesión con un mock del cliente HTTP
+        user_result = self.service_login.login(request_user)
+
+        # se crea una sesión para el usuario autenticado
+        session_id = create_session(user_result.user_id, user_result.name)
+
+        # se compruebra que se haya generado un ID de sesión
+        self.assertIsNotNone(session_id)
 
 if __name__ == '__main__':
     pass

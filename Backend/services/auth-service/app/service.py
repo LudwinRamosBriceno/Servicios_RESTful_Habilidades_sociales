@@ -1,5 +1,5 @@
-from .models import AuthenticatedUser, LoginRequest
-from .repository import AuthRepository
+from models import AuthenticatedUser, LoginRequest
+from repository import AuthRepository
 
 
 class AuthService:
