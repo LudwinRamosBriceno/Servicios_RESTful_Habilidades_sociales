@@ -3,9 +3,8 @@ from typing import List
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from .db import SessionLocal
-from .models import User
-from .orm_models import UserORM
+from models import User
+from orm_models import UserORM
 
 
 class UserRepository:
@@ -13,11 +12,11 @@ class UserRepository:
     Capa de persistencia para operaciones CRUD de usuarios.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, session_factory):
         """
-        Inicializa la instancia del repositorio.
+        Inicializa la instancia del repositorio con una fábrica de sesiones.
         """
-        self._session_factory = SessionLocal
+        self._session_factory = session_factory
 
     def create(self, user: User) -> User:
         """
@@ -72,7 +71,7 @@ class UserRepository:
         with self._session_factory() as session:
             session: Session
             orm_user = session.scalars(statement).first()
-
+        
         if not orm_user:
             return None
         return self._orm_to_user(orm_user)

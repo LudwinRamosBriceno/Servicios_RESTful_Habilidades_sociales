@@ -2,11 +2,15 @@ from fastapi import APIRouter
 
 from .models import CreateProductRequest, UpdateProductRequest, UpdateStockRequest
 from .repository import ProductRepository
+from .db import SessionLocal
 from .service import ProductService
 
 # Se define el router con la url base del servicio
 router = APIRouter(prefix="/products", tags=["products"])
-service = ProductService(ProductRepository())
+
+# Inicialización del servicio de productos con su repositorio.
+repository = ProductRepository(SessionLocal) # se le pasa la sesión de base de datos al repositorio
+service = ProductService(repository=repository)
 
 @router.get("")
 def list_products():

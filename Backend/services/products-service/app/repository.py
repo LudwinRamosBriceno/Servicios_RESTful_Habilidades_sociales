@@ -3,19 +3,18 @@ from typing import List
 from sqlalchemy import select
 from sqlalchemy.orm import Session # para manejar las sesiones de base de datos
 
-from .db import SessionLocal
-from .models import Product
-from .orm_models import ProductORM
+from models import Product
+from orm_models import ProductORM
  
 class ProductRepository:
     """
     Repositorio con la lógica de acceso a la base de datos, para crear, leer, actualizar y eliminar productos.
     """
-    def __init__(self) -> None:
+    def __init__(self, session_factory):
         """
         Crea nuevas sesiones de base de datos para cada operación
         """
-        self._session_factory = SessionLocal
+        self._session_factory = session_factory
 
     def save(self, product: Product) -> Product:
         """

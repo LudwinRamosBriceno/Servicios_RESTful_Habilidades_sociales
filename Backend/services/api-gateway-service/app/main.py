@@ -15,6 +15,7 @@ from .db import Base, engine
 from .messaging import publish_event, start_consumer
 from .models import RequestStatus
 from .repository import RequestRepository
+from .db import SessionLocal
 from .events import (
     EVENT_PRODUCTS_LIST_REQUESTED,
     EVENT_PRODUCTS_GET_REQUESTED,
@@ -38,7 +39,7 @@ from .events import (
 app = FastAPI(title="NovaLink API Gateway", version="1.0.0")
 
 # Repositorio para registrar solicitudes y respuestas.
-repo = RequestRepository()
+repo = RequestRepository(SessionLocal)
 
 # Configuracion del servicio de autenticacion y JWT.
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://auth-service:8004")

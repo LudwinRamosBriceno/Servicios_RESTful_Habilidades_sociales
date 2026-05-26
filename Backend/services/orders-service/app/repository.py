@@ -3,10 +3,8 @@ from typing import List
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .db import SessionLocal
-from .models import Order, OrderStatus
-from .orm_models import OrderORM
-
+from models import Order, OrderStatus
+from orm_models import OrderORM
 
 class OrderRepository:
     """
@@ -14,11 +12,11 @@ class OrderRepository:
     Proporciona métodos para crear una orden, encontrar una orden por su ID, y encontrar
     todas las órdenes asociadas a un usuario específico.
     """
-    def __init__(self) -> None:
+    def __init__(self, session_factory):
         """
-        Inicializa el repositorio de órdenes.
+        Inicializa el repositorio de órdenes con una fábrica de sesiones.
         """
-        self._session_factory = SessionLocal
+        self._session_factory = session_factory # sesión de base de datos
 
     def create(self, order: Order) -> Order:
         """

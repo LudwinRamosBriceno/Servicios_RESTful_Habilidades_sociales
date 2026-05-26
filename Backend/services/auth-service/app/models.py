@@ -8,7 +8,6 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
-
 class AuthenticatedUser(BaseModel):
     """
     Modelo que representa un usuario autenticado, con su ID y nombre.
