@@ -2,8 +2,8 @@
 
 from typing import List
 
-from models import Product
-from orm_models import ProductORM
+from app.models import Product
+from app.orm_models import ProductORM
 from sqlalchemy import select
 from sqlalchemy.orm import Session  # para manejar las sesiones de base de datos
 

@@ -2,8 +2,8 @@
 
 from typing import List
 
-from models import User
-from orm_models import UserORM
+from app.models import User
+from app.orm_models import UserORM
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 

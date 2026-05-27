@@ -2,8 +2,8 @@
 
 from typing import List
 
-from models import Order, OrderStatus
-from orm_models import OrderORM
+from app.models import Order, OrderStatus
+from app.orm_models import OrderORM
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 

@@ -2,6 +2,7 @@
 
 from fastapi import FastAPI, HTTPException
 
+from .db import SessionLocal
 from .controller import router as product_router
 from .messaging import publish_event, start_consumer
 from .repository import ProductRepository
@@ -21,7 +22,7 @@ app.include_router(product_router)
 @app.on_event("startup")
 def start_event_consumers() -> None:
     """Arranca consumidores de eventos para validar inventario."""
-    service = ProductService(ProductRepository())
+    service = ProductService(ProductRepository(SessionLocal))
 
     def _handle_order_created(payload: dict) -> None:
         """Maneja el evento de orden creada para validar inventario."""
@@ -40,7 +41,7 @@ def start_event_consumers() -> None:
 @app.on_event("startup")
 def start_request_consumers() -> None:
     """Consume requests del gateway y publica respuestas."""
-    service = ProductService(ProductRepository())
+    service = ProductService(ProductRepository(SessionLocal))
 
     def _respond(
         event_type: str,

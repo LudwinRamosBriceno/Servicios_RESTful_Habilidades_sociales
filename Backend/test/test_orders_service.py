@@ -13,7 +13,7 @@ from mockups.order_mock import (
 
 # Se añade la ruta del servicio al PYTHONPATH para que los imports absolutos funcionen
 service_path = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "services", "orders-service", "app")
+    os.path.join(os.path.dirname(__file__), "..", "services", "orders-service")
 )
 sys.path.insert(0, service_path)
 
@@ -32,20 +32,21 @@ for path in list(sys.path):
 
 # Evita reutilizar modulos cacheados con el mismo nombre de otros servicios.
 for module_name in (
-    "models",
-    "repository",
-    "service",
-    "orm_models",
-    "messaging",
+    "app",
+    "app.models",
+    "app.repository",
+    "app.service",
+    "app.orm_models",
+    "app.messaging",
 ):
     sys.modules.pop(module_name, None)
 
-import service as orders_service_module
+import app.service as orders_service_module
 
 # from mockups.order_mock import DummyDB_CreateOrder
-from models import OrderRequest, OrderResult
-from repository import OrderRepository
-from service import OrderService
+from app.models import OrderRequest, OrderResult
+from app.repository import OrderRepository
+from app.service import OrderService
 
 
 class TestOrdersService(unittest.TestCase):

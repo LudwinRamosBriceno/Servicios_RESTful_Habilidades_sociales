@@ -1,7 +1,7 @@
 """Servicio de autenticación para inicio de sesión y creación de sesiones."""
 
-from models import AuthenticatedUser, LoginRequest
-from repository import AuthRepository
+from app.models import AuthenticatedUser, LoginRequest
+from app.repository import AuthRepository
 
 
 class AuthService:

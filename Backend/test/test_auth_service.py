@@ -8,24 +8,38 @@ from unittest.mock import MagicMock
 
 # Se añade la ruta del servicio al PYTHONPATH para que los imports absolutos funcionen
 service_path = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "services", "auth-service", "app")
+    os.path.join(os.path.dirname(__file__), "..", "services", "auth-service")
 )
 sys.path.insert(0, service_path)
 
+# Elimina rutas de otros servicios para evitar conflictos de imports (esto porque las carpetas de servicios tiene guiones)
+services_root = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "services")
+)
+normalized_service_path = os.path.normcase(service_path)
+for path in list(sys.path):
+    normalized_path = os.path.normcase(os.path.abspath(path))
+    if (
+        normalized_path.startswith(os.path.normcase(services_root))
+        and normalized_path != normalized_service_path
+    ):
+        sys.path.remove(path)
+
 # Evita reutilizar modulos cacheados con el mismo nombre de otros servicios.
 for module_name in (
-    "models",
-    "repository",
-    "service",
-    "clients",
-    "clients.user_http_client",
+    "app",
+    "app.models",
+    "app.repository",
+    "app.service",
+    "app.clients",
+    "app.clients.user_http_client",
 ):
     sys.modules.pop(module_name, None)
 
-from models import LoginRequest
-from repository import AuthRepository
-from service import AuthService
-from session_store import create_session
+from app.models import LoginRequest
+from app.repository import AuthRepository
+from app.service import AuthService
+from app.session_store import create_session
 
 
 class TestAuthService(unittest.TestCase):
@@ -66,4 +80,4 @@ class TestAuthService(unittest.TestCase):
 if __name__ == "__main__":
     # unittest.main()
     pass
-# Ejecutar prueba: python -m unittest Backend/test/test_auth_service.py
+# Ejecutar prueba: pytest Backend/test/test_auth_service.py

@@ -1,6 +1,6 @@
 """Modelo ORM para la tabla de productos con SQLAlchemy."""
 
-from db import Base
+from app.db import Base
 from sqlalchemy import Boolean, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 

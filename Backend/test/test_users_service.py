@@ -14,7 +14,7 @@ from mockups.user_mock import (  # Es importante que estos imports estén en est
 
 # Se añade la ruta del servicio al PYTHONPATH para que los imports absolutos funcionen
 service_path = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "services", "users-service", "app")
+    os.path.join(os.path.dirname(__file__), "..", "services", "users-service")
 )
 sys.path.insert(0, service_path)
 
@@ -33,21 +33,22 @@ for path in list(sys.path):
 
 # Evita reutilizar modulos cacheados con el mismo nombre de otros servicios.
 for module_name in (
-    "models",
-    "repository",
-    "service",
-    "orm_models",
-    "clients",
-    "clients.product_http_client",
+    "app",
+    "app.models",
+    "app.repository",
+    "app.service",
+    "app.orm_models",
+    "app.clients",
+    "app.clients.product_http_client",
 ):
     sys.modules.pop(module_name, None)
 
-users_models = importlib.import_module("models")
+users_models = importlib.import_module("app.models")
 
 # from mockups.user_mock import DummyDB_CreateUser, DummyDB_get_user_skills
-from models import CreateUserRequest
-from repository import UserRepository
-from service import UserService
+from app.models import CreateUserRequest
+from app.repository import UserRepository
+from app.service import UserService
 
 
 class TestUserService(unittest.TestCase):

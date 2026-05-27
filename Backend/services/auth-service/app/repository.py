@@ -1,7 +1,7 @@
 """Repositorio de autenticación que usa un cliente HTTP de usuarios."""
 
-from clients.user_http_client import UserHttpClient
-from models import AuthenticatedUser
+from app.clients.user_http_client import UserHttpClient
+from app.models import AuthenticatedUser
 
 
 class AuthRepository:

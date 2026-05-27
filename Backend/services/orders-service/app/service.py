@@ -3,9 +3,9 @@
 import uuid
 
 from fastapi import HTTPException, status
-from messaging import publish_event
-from models import Order, OrderRequest, OrderResult, OrderStatus, utc_now_iso
-from repository import OrderRepository
+from app.messaging import publish_event
+from app.models import Order, OrderRequest, OrderResult, OrderStatus, utc_now_iso
+from app.repository import OrderRepository
 
 # Eventos de dominio para el flujo EDA
 EVENT_ORDER_CREATED = "pedido.creado"

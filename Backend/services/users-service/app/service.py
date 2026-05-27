@@ -3,10 +3,11 @@
 import os
 import uuid
 
-from clients.product_http_client import ProductHttpClient
+from app.clients.product_http_client import ProductHttpClient
+from app.models import UserSkill
 from fastapi import HTTPException, status
-from messaging import publish_event
-from models import (
+from app.messaging import publish_event
+from app.models import (
     AddSkillRequest,
     AddSkillResponse,
     AuthenticatedUserResponse,
@@ -17,7 +18,7 @@ from models import (
     UserListItemResponse,
     UserResponse,
 )
-from repository import UserRepository
+from app.repository import UserRepository
 
 # Eventos de dominio para el flujo EDA
 EVENT_INVENTORY_CONFIRMED = "inventario.confirmado"
@@ -191,8 +192,6 @@ class UserService:
 
     def _to_response(self, user: User) -> UserResponse:
         """Mapea el modelo interno a DTO de respuesta para la API."""
-        from models import UserSkill
-
         skills_list = [
             UserSkill(
                 skillId=skill_id,

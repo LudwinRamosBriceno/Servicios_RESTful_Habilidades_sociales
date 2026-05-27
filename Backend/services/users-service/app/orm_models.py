@@ -1,6 +1,6 @@
 """ORM de SQLAlchemy para mapear la tabla users en PostgreSQL."""
 
-from db import Base
+from app.db import Base
 from sqlalchemy import JSON, String
 from sqlalchemy.orm import Mapped, mapped_column
 

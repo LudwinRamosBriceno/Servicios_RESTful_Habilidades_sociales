@@ -1,6 +1,6 @@
 """Modelos ORM para la gestión de órdenes en la base de datos."""
 
-from db import Base
+from app.db import Base
 from sqlalchemy import Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 

@@ -2,6 +2,7 @@
 
 from fastapi import FastAPI, HTTPException
 
+from .db import SessionLocal
 from .controller import router as user_router
 from .messaging import publish_event, start_consumer
 from .models import CreateUserRequest
@@ -25,7 +26,7 @@ app.include_router(user_router)
 @app.on_event("startup")
 def start_event_consumers() -> None:
     """Arranca consumidores de eventos para asignar habilidades."""
-    service = UserService(UserRepository())
+    service = UserService(UserRepository(SessionLocal))
 
     def _handle_inventory_confirmed(payload: dict) -> None:
         if payload.get("event_type") != EVENT_INVENTORY_CONFIRMED:
@@ -42,7 +43,7 @@ def start_event_consumers() -> None:
 @app.on_event("startup")
 def start_request_consumers() -> None:
     """Consume requests del gateway y publica respuestas."""
-    service = UserService(UserRepository())
+    service = UserService(UserRepository(SessionLocal))
 
     def _respond(
         event_type: str,

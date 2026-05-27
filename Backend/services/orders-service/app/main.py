@@ -8,6 +8,7 @@ from alembic.config import Config
 from fastapi import FastAPI, HTTPException
 
 from .controller import router as orders_router
+from .db import SessionLocal
 from .messaging import publish_event, start_consumer
 from .models import OrderRequest
 from .repository import OrderRepository
@@ -62,7 +63,7 @@ def run_db_migrations() -> None:
 @app.on_event("startup")
 def start_event_consumers() -> None:
     """Arranca consumidores de eventos para actualizar estados de ordenes."""
-    service = OrderService(OrderRepository())
+    service = OrderService(OrderRepository(SessionLocal))
 
     def _handle_event(payload: dict) -> None:
         """Maneja eventos de confirmación y rechazo de inventario."""
@@ -84,7 +85,7 @@ def start_event_consumers() -> None:
 @app.on_event("startup")
 def start_request_consumers() -> None:
     """Consume requests del gateway y publica respuestas."""
-    service = OrderService(OrderRepository())
+    service = OrderService(OrderRepository(SessionLocal))
 
     def _respond(
         event_type: str,
