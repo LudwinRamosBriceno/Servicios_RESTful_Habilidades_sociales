@@ -1,3 +1,5 @@
+"""Módulo para el manejo de sesiones de autenticación en memoria."""
+
 import os
 import secrets
 import threading
@@ -13,10 +15,12 @@ _lock = threading.Lock()
 
 
 def _now_seconds() -> int:
+    """Obtiene el timestamp actual en segundos desde epoch."""
     return int(time.time())
 
 
 def _purge_if_expired(session_id: str, session: dict[str, Any]) -> bool:
+    """Elimina una sesión si ha expirado."""
     if session.get("expires_at", 0) <= _now_seconds():
         _sessions.pop(session_id, None)
         return True
@@ -24,6 +28,7 @@ def _purge_if_expired(session_id: str, session: dict[str, Any]) -> bool:
 
 
 def create_session(user_id: str, name: str | None) -> tuple[str, int]:
+    """Crea una nueva sesión para un usuario."""
     session_id = secrets.token_urlsafe(32)
     expires_at = _now_seconds() + SESSION_TTL_SECONDS
     with _lock:
@@ -36,6 +41,7 @@ def create_session(user_id: str, name: str | None) -> tuple[str, int]:
 
 
 def get_session(session_id: str | None) -> dict[str, Any] | None:
+    """Obtiene los datos de una sesión por su ID."""
     if not session_id:
         return None
     with _lock:
@@ -48,6 +54,7 @@ def get_session(session_id: str | None) -> dict[str, Any] | None:
 
 
 def delete_session(session_id: str | None) -> None:
+    """Elimina una sesión por su ID."""
     if not session_id:
         return
     with _lock:

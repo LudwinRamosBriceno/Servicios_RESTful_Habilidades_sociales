@@ -1,4 +1,5 @@
-# Eventos de request
+"""Constantes de eventos para el API Gateway."""
+
 EVENT_PRODUCTS_LIST_REQUESTED = "products.list.requested"
 EVENT_PRODUCTS_GET_REQUESTED = "products.get.requested"
 EVENT_USERS_LIST_REQUESTED = "users.list.requested"

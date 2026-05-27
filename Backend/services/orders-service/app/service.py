@@ -1,7 +1,8 @@
+"""Servicio de órdenes para creación, consulta y eventos de dominio."""
+
 import uuid
 
 from fastapi import HTTPException, status
-
 from messaging import publish_event
 from models import Order, OrderRequest, OrderResult, OrderStatus, utc_now_iso
 from repository import OrderRepository
@@ -14,22 +15,21 @@ EVENT_ORDER_STATUS_UPDATED = "orders.status.updated"
 
 
 class OrderService:
-    """
-    Servicio de órdenes que maneja la lógica de negocio relacionada con la creación y recuperación de órdenes.
-    """
+    """Servicio de órdenes para creación y recuperación de órdenes."""
 
     def __init__(self, repository: OrderRepository) -> None:
-        """
-        Inicializa el servicio de órdenes con el repositorio proporcionado.
-        """
+        """Inicializa el servicio de órdenes con el repositorio."""
         self._repository = repository
 
-    def create_order(self, payload: OrderRequest, user_id: str, request_id: str | None) -> tuple[OrderResult, int]:
-        """
-        Crea una nueva orden en estado pendiente y publica el evento para el flujo EDA.
-        """
+    def create_order(
+        self, payload: OrderRequest, user_id: str, request_id: str | None
+    ) -> tuple[OrderResult, int]:
+        """Crea una orden pendiente y publica el evento para el flujo EDA."""
         if payload.quantity <= 0:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="La cantidad debe ser mayor que 0")
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="La cantidad debe ser mayor que 0",
+            )
 
         order = Order(
             id=f"ord_{uuid.uuid4().hex[:8]}",
@@ -53,12 +53,13 @@ class OrderService:
             correlation_id=order.id,
         )
 
-        return self._to_result(order, "Orden creada, pendiente de inventario"), status.HTTP_202_ACCEPTED
+        return (
+            self._to_result(order, "Orden creada, pendiente de inventario"),
+            status.HTTP_202_ACCEPTED,
+        )
 
     def handle_inventory_confirmed(self, payload: dict) -> None:
-        """
-        Actualiza la orden a completada al recibir confirmacion de inventario.
-        """
+        """Actualiza la orden a completada tras confirmacion de inventario."""
         data = payload.get("data", {})
         request_id = data.get("requestId")
         order_id = data.get("orderId")
@@ -80,9 +81,7 @@ class OrderService:
         )
 
     def handle_inventory_rejected(self, payload: dict) -> None:
-        """
-        Actualiza la orden a rechazada al recibir rechazo de inventario.
-        """
+        """Actualiza la orden a rechazada tras rechazo de inventario."""
         data = payload.get("data", {})
         request_id = data.get("requestId")
         order_id = data.get("orderId")
@@ -105,27 +104,24 @@ class OrderService:
         )
 
     def get_order(self, order_id: str) -> OrderResult:
-        """
-        Obtiene los detalles de una orden específica por su ID, manejando la lógica de negocio relacionada con la
-        recuperación de la orden y la generación del resultado.
-        """
+        """Obtiene los detalles de una orden por su ID."""
         order = self._repository.find_by_id(order_id)
         if not order:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Orden no encontrada")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Orden no encontrada"
+            )
         return self._to_result(order, "Orden obtenida")
 
     def get_orders_by_user(self, user_id: str) -> list[OrderResult]:
-        """
-        Obtiene todas las órdenes asociadas a un usuario específico, manejando la lógica de negocio 
-        relacionada con la recuperación de las órdenes y la generación del resultado.
-        """
-        return [self._to_result(order, "Orden obtenida") for order in self._repository.find_by_user_id(user_id)]
+        """Obtiene todas las órdenes asociadas a un usuario."""
+        return [
+            self._to_result(order, "Orden obtenida")
+            for order in self._repository.find_by_user_id(user_id)
+        ]
 
     @staticmethod
     def _to_result(order: Order, message: str) -> OrderResult:
-        """
-        Convierte una orden en un resultado de orden, incluyendo un mensaje personalizado.
-        """
+        """Convierte una orden en un resultado de orden."""
         return OrderResult(
             orderId=order.id,
             userId=order.user_id,

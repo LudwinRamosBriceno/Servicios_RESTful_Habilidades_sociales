@@ -1,3 +1,5 @@
+"""Servicio de autenticación para el servicio de órdenes."""
+
 import os
 
 import jwt
@@ -7,9 +9,8 @@ from pydantic import BaseModel
 
 
 class AuthenticatedUser(BaseModel):
-    """
-    Modelo que representa un usuario autenticado, con su ID, nombre y token JWT.
-    """
+    """Modelo que representa un usuario autenticado con token JWT."""
+
     user_id: str
     name: str | None = None
     token: str
@@ -22,16 +23,12 @@ _security = HTTPBearer(auto_error=False)
 def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(_security),
 ) -> AuthenticatedUser:
-    
-    """
-    Dependencia de FastAPI que se utiliza para proteger rutas que requieren autenticación.
-    Esta función extrae el token JWT de las credenciales proporcionadas, lo decodifica y valida.
-    Devuelve un objeto AuthenticatedUser con la información del usuario autenticado.
-    """
-
+    """Obtiene el usuario autenticado a partir del token JWT."""
     # Si no se proporcionan credenciales o el esquema no es Bearer, se lanza un error de autenticación.
     if not credentials or credentials.scheme.lower() != "bearer":
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token requerido")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token requerido"
+        )
 
     # Extrae el token JWT de las credenciales y define los parámetros para decodificarlo.
     token = credentials.credentials
@@ -44,21 +41,29 @@ def get_current_user(
         payload = jwt.decode(token, secret, algorithms=[algorithm])
     # Si el token es inválido o ha expirado, se lanza un error de autenticación.
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expirado")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expirado"
+        )
     except jwt.PyJWTError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token invalido")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token invalido"
+        )
 
     # Si el emisor del token no es el esperado, se lanza un error de autenticación.
     if payload.get("iss") != issuer:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token invalido")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token invalido"
+        )
 
-    # Si el token es válido, se extrae la información del usuario (ID y nombre) 
+    # Si el token es válido, se extrae la información del usuario (ID y nombre)
     # del payload y se devuelve un objeto AuthenticatedUser.
     user_id = payload.get("sub")
 
     # Si no se encuentra el ID de usuario en el payload, se lanza un error de autenticación.
     if not user_id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token invalido")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token invalido"
+        )
 
     # Devuelve un objeto AuthenticatedUser con el ID de usuario, nombre y el token JWT.
     return AuthenticatedUser(user_id=user_id, name=payload.get("name"), token=token)

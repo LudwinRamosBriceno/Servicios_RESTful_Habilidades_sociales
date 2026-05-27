@@ -1,3 +1,5 @@
+"""API Gateway que enruta solicitudes y expone canal SSE para respuestas."""
+
 import asyncio
 import json
 import os
@@ -11,29 +13,28 @@ import httpx
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from .db import Base, engine
-from .messaging import publish_event, start_consumer
-from .models import RequestStatus
-from .repository import RequestRepository
-from .db import SessionLocal
+from .db import Base, SessionLocal, engine
 from .events import (
-    EVENT_PRODUCTS_LIST_REQUESTED,
-    EVENT_PRODUCTS_GET_REQUESTED,
-    EVENT_USERS_LIST_REQUESTED,
-    EVENT_USERS_GET_REQUESTED,
-    EVENT_USERS_CREATE_REQUESTED,
-    EVENT_USERS_CREATE_RESPONDED,
     EVENT_ORDERS_CREATE_REQUESTED,
     EVENT_ORDERS_CREATE_RESPONDED,
     EVENT_ORDERS_GET_REQUESTED,
     EVENT_ORDERS_LIST_BY_USER_REQUESTED,
     EVENT_ORDERS_STATUS_UPDATED,
-    RESPONSE_EVENTS,
-    PUSH_EVENTS,
+    EVENT_PRODUCTS_GET_REQUESTED,
+    EVENT_PRODUCTS_LIST_REQUESTED,
     EVENT_TYPE_MAP,
-    RESPONSE_SUCCESS_MESSAGE,
+    EVENT_USERS_CREATE_REQUESTED,
+    EVENT_USERS_CREATE_RESPONDED,
+    EVENT_USERS_GET_REQUESTED,
+    EVENT_USERS_LIST_REQUESTED,
+    PUSH_EVENTS,
     RESPONSE_ERROR_MESSAGE,
+    RESPONSE_EVENTS,
+    RESPONSE_SUCCESS_MESSAGE,
 )
+from .messaging import publish_event, start_consumer
+from .models import RequestStatus
+from .repository import RequestRepository
 
 # Aplicacion principal del API Gateway.
 app = FastAPI(title="NovaLink API Gateway", version="1.0.0")
@@ -44,11 +45,11 @@ repo = RequestRepository(SessionLocal)
 # Configuracion del servicio de autenticacion y JWT.
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://auth-service:8004")
 
+
 @dataclass
 class SseSubscriber:
-    """
-    Canal SSE asociado al event loop que atiende la conexion.
-    """
+    """Canal SSE asociado al event loop que atiende la conexion."""
+
     queue: asyncio.Queue
     loop: asyncio.AbstractEventLoop
 
@@ -59,9 +60,7 @@ _subscribers_lock = threading.Lock()
 
 
 def _subscriber_key(user_id: str | None, client_id: str | None) -> str:
-    """
-    Determina la clave de suscripcion segun usuario o cliente.
-    """
+    """Determina la clave de suscripcion segun usuario o cliente."""
     if user_id:
         return f"user:{user_id}"
     if client_id:
@@ -70,29 +69,25 @@ def _subscriber_key(user_id: str | None, client_id: str | None) -> str:
 
 
 def _add_subscriber(key: str, subscriber: SseSubscriber) -> None:
-    """
-    Registra un canal SSE en la lista de suscriptores.
-    """
+    """Registra un canal SSE en la lista de suscriptores."""
     with _subscribers_lock:
         _subscribers.setdefault(key, []).append(subscriber)
 
 
 def _remove_subscriber(key: str, subscriber: SseSubscriber) -> None:
-    """
-    Remueve un canal SSE cuando el cliente se desconecta.
-    """
+    """Remueve un canal SSE cuando el cliente se desconecta."""
     with _subscribers_lock:
         if key not in _subscribers:
             return
-        _subscribers[key] = [item for item in _subscribers[key] if item is not subscriber]
+        _subscribers[key] = [
+            item for item in _subscribers[key] if item is not subscriber
+        ]
         if not _subscribers[key]:
             del _subscribers[key]
 
 
 def _notify_subscribers(key: str, event: dict) -> None:
-    """
-    Publica un evento de respuesta a los suscriptores SSE.
-    """
+    """Publica un evento de respuesta a los suscriptores SSE."""
     with _subscribers_lock:
         subscribers = list(_subscribers.get(key, []))
 
@@ -111,6 +106,7 @@ def _notify_subscribers(key: str, event: dict) -> None:
 
 
 async def _validate_session(request: Request) -> dict | None:
+    """Valida la sesion usando el auth-service."""
     # Validación centralizada: el gateway depende del auth-service para sesiones.
     cookie_header = request.headers.get("cookie")
     if not cookie_header:
@@ -134,7 +130,9 @@ async def _validate_session(request: Request) -> dict | None:
         ) from exc
 
     if response.status_code == status.HTTP_401_UNAUTHORIZED:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Sesion invalida")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Sesion invalida"
+        )
     if response.status_code >= 500:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -154,9 +152,7 @@ async def get_identity(
     request: Request,
     x_client_id: str | None = Header(default=None, alias="X-Client-Id"),
 ) -> dict:
-    """
-    Determina identidad por sesión o por client id.
-    """
+    """Determina identidad por sesion o por client id."""
     session = await _validate_session(request)
     if session and session.get("user_id"):
         return {"user_id": session.get("user_id"), "client_id": None}
@@ -164,25 +160,30 @@ async def get_identity(
     if x_client_id:
         return {"user_id": None, "client_id": x_client_id}
 
-    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Identidad requerida")
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED, detail="Identidad requerida"
+    )
 
 
-def _create_request(event_type: str, user_id: str | None, client_id: str | None, data: dict) -> str:
-    """
-    Registra una solicitud y publica el evento de request.
-    """
+def _create_request(
+    event_type: str, user_id: str | None, client_id: str | None, data: dict
+) -> str:
+    """Registra una solicitud y publica el evento de request."""
     request_id = f"req_{uuid.uuid4().hex[:10]}"
     repo.create_request(request_id, event_type, user_id, client_id)
-    payload = {"requestId": request_id, "userId": user_id, "clientId": client_id, **data}
+    payload = {
+        "requestId": request_id,
+        "userId": user_id,
+        "clientId": client_id,
+        **data,
+    }
     publish_event(event_type, payload, correlation_id=request_id)
     return request_id
 
 
 @app.post("/api/auth/login")
 async def login(payload: dict) -> JSONResponse:
-    """
-    Proxy sincrono para login (unico request directo).
-    """
+    """Proxy sincrono para el inicio de sesion (unico request directo)."""
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.post(f"{AUTH_SERVICE_URL}/login", json=payload)
@@ -200,7 +201,10 @@ async def login(payload: dict) -> JSONResponse:
     try:
         content = response.json()
     except ValueError:
-        content = {"detail": response.text or "Respuesta invalida del servicio de autenticacion"}
+        content = {
+            "detail": response.text
+            or "Respuesta invalida del servicio de autenticacion"
+        }
 
     gateway_response = JSONResponse(status_code=response.status_code, content=content)
     for value in response.headers.get_list("set-cookie"):
@@ -210,9 +214,7 @@ async def login(payload: dict) -> JSONResponse:
 
 @app.get("/api/auth/session")
 async def session(request: Request) -> JSONResponse:
-    """
-    Proxy para validar la sesión actual.
-    """
+    """Proxy para validar la sesion actual."""
     cookie_header = request.headers.get("cookie", "")
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
@@ -234,16 +236,17 @@ async def session(request: Request) -> JSONResponse:
     try:
         content = response.json()
     except ValueError:
-        content = {"detail": response.text or "Respuesta invalida del servicio de autenticacion"}
+        content = {
+            "detail": response.text
+            or "Respuesta invalida del servicio de autenticacion"
+        }
 
     return JSONResponse(status_code=response.status_code, content=content)
 
 
 @app.post("/api/auth/logout")
 async def logout(request: Request) -> JSONResponse:
-    """
-    Proxy para cerrar sesión.
-    """
+    """Proxy para cerrar sesion."""
     cookie_header = request.headers.get("cookie", "")
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
@@ -265,7 +268,10 @@ async def logout(request: Request) -> JSONResponse:
     try:
         content = response.json()
     except ValueError:
-        content = {"detail": response.text or "Respuesta invalida del servicio de autenticacion"}
+        content = {
+            "detail": response.text
+            or "Respuesta invalida del servicio de autenticacion"
+        }
 
     gateway_response = JSONResponse(status_code=response.status_code, content=content)
     for value in response.headers.get_list("set-cookie"):
@@ -274,12 +280,14 @@ async def logout(request: Request) -> JSONResponse:
 
 
 @app.get("/api/events")
-async def events(request: Request, identity: dict = Depends(get_identity)) -> StreamingResponse:
-    """
-    Canal SSE para recibir respuestas asincronas.
-    """
+async def events(
+    request: Request, identity: dict = Depends(get_identity)
+) -> StreamingResponse:
+    """Canal SSE para recibir respuestas asincronas."""
     key = _subscriber_key(identity.get("user_id"), identity.get("client_id"))
-    subscriber = SseSubscriber(queue=asyncio.Queue(maxsize=100), loop=asyncio.get_running_loop())
+    subscriber = SseSubscriber(
+        queue=asyncio.Queue(maxsize=100), loop=asyncio.get_running_loop()
+    )
     _add_subscriber(key, subscriber)
 
     async def _stream() -> Any:
@@ -301,18 +309,19 @@ async def events(request: Request, identity: dict = Depends(get_identity)) -> St
 
 @app.get("/health")
 def healthcheck() -> dict:
-    """
-    Endpoint de salud para Kubernetes y diagnostico local.
-    """
+    """Endpoint de salud para Kubernetes y diagnostico local."""
     return {"status": "ok", "service": "api-gateway"}
 
 
 @app.get("/api/products")
 async def list_products(identity: dict = Depends(get_identity)) -> dict:
-    """
-    Solicita el listado de productos via eventos.
-    """
-    request_id = _create_request(EVENT_PRODUCTS_LIST_REQUESTED, identity.get("user_id"), identity.get("client_id"), {})
+    """Solicita el listado de productos via eventos."""
+    request_id = _create_request(
+        EVENT_PRODUCTS_LIST_REQUESTED,
+        identity.get("user_id"),
+        identity.get("client_id"),
+        {},
+    )
     return {
         "type": "products-loaded",
         "requestId": request_id,
@@ -323,9 +332,7 @@ async def list_products(identity: dict = Depends(get_identity)) -> dict:
 
 @app.get("/api/products/{product_id}")
 async def get_product(product_id: str, identity: dict = Depends(get_identity)) -> dict:
-    """
-    Solicita el detalle de un producto via eventos.
-    """
+    """Solicita el detalle de un producto via eventos."""
     request_id = _create_request(
         EVENT_PRODUCTS_GET_REQUESTED,
         identity.get("user_id"),
@@ -342,10 +349,13 @@ async def get_product(product_id: str, identity: dict = Depends(get_identity)) -
 
 @app.get("/api/users")
 async def list_users(identity: dict = Depends(get_identity)) -> dict:
-    """
-    Solicita el listado de usuarios via eventos.
-    """
-    request_id = _create_request(EVENT_USERS_LIST_REQUESTED, identity.get("user_id"), identity.get("client_id"), {})
+    """Solicita el listado de usuarios via eventos."""
+    request_id = _create_request(
+        EVENT_USERS_LIST_REQUESTED,
+        identity.get("user_id"),
+        identity.get("client_id"),
+        {},
+    )
     return {
         "type": "users-loaded",
         "requestId": request_id,
@@ -356,9 +366,7 @@ async def list_users(identity: dict = Depends(get_identity)) -> dict:
 
 @app.get("/api/users/{user_id}")
 async def get_user(user_id: str, identity: dict = Depends(get_identity)) -> dict:
-    """
-    Solicita el detalle de un usuario via eventos.
-    """
+    """Solicita el detalle de un usuario via eventos."""
     request_id = _create_request(
         EVENT_USERS_GET_REQUESTED,
         identity.get("user_id"),
@@ -375,9 +383,7 @@ async def get_user(user_id: str, identity: dict = Depends(get_identity)) -> dict
 
 @app.post("/api/users")
 async def create_user(payload: dict, identity: dict = Depends(get_identity)) -> dict:
-    """
-    Solicita el registro de un usuario via eventos.
-    """
+    """Solicita el registro de un usuario via eventos."""
     request_id = _create_request(
         EVENT_USERS_CREATE_REQUESTED,
         identity.get("user_id"),
@@ -394,14 +400,16 @@ async def create_user(payload: dict, identity: dict = Depends(get_identity)) -> 
 
 @app.post("/api/orders")
 async def create_order(payload: dict, identity: dict = Depends(get_identity)) -> dict:
-    """
-    Solicita la creacion de una orden via eventos.
-    """
+    """Solicita la creacion de una orden via eventos."""
     user_id = identity.get("user_id")
     if not user_id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token requerido")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token requerido"
+        )
     if user_id and payload.get("userId") not in (None, user_id):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Usuario no autorizado")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Usuario no autorizado"
+        )
 
     if user_id:
         payload = {**payload, "userId": user_id}
@@ -422,11 +430,11 @@ async def create_order(payload: dict, identity: dict = Depends(get_identity)) ->
 
 @app.get("/api/orders/{order_id}")
 async def get_order(order_id: str, identity: dict = Depends(get_identity)) -> dict:
-    """
-    Solicita el detalle de una orden via eventos.
-    """
+    """Solicita el detalle de una orden via eventos."""
     if not identity.get("user_id"):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token requerido")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token requerido"
+        )
     request_id = _create_request(
         EVENT_ORDERS_GET_REQUESTED,
         identity.get("user_id"),
@@ -442,14 +450,18 @@ async def get_order(order_id: str, identity: dict = Depends(get_identity)) -> di
 
 
 @app.get("/api/orders/user/{user_id}")
-async def get_orders_by_user(user_id: str, identity: dict = Depends(get_identity)) -> dict:
-    """
-    Solicita el listado de ordenes por usuario via eventos.
-    """
+async def get_orders_by_user(
+    user_id: str, identity: dict = Depends(get_identity)
+) -> dict:
+    """Solicita el listado de ordenes por usuario via eventos."""
     if not identity.get("user_id"):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token requerido")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token requerido"
+        )
     if identity.get("user_id") and identity.get("user_id") != user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Usuario no autorizado")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Usuario no autorizado"
+        )
 
     request_id = _create_request(
         EVENT_ORDERS_LIST_BY_USER_REQUESTED,
@@ -466,19 +478,25 @@ async def get_orders_by_user(user_id: str, identity: dict = Depends(get_identity
 
 
 @app.get("/api/requests/{request_id}")
-async def get_request_status(request_id: str, identity: dict = Depends(get_identity)) -> dict:
-    """
-    Consulta el estado de una solicitud registrada.
-    """
+async def get_request_status(
+    request_id: str, identity: dict = Depends(get_identity)
+) -> dict:
+    """Consulta el estado de una solicitud registrada."""
     record = repo.get_request(request_id)
     if not record:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Request no encontrado")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Request no encontrado"
+        )
 
     if record.user_id and identity.get("user_id") != record.user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No autorizado")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="No autorizado"
+        )
 
     if record.client_id and identity.get("client_id") != record.client_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No autorizado")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="No autorizado"
+        )
 
     return {
         "requestId": record.id,
@@ -490,9 +508,7 @@ async def get_request_status(request_id: str, identity: dict = Depends(get_ident
 
 @app.on_event("startup")
 def start_response_consumer() -> None:
-    """
-    Arranca el consumidor de respuestas del gateway.
-    """
+    """Arranca el consumidor de respuestas del gateway."""
     last_error: Exception | None = None
     for attempt in range(1, 13):
         try:
@@ -508,9 +524,7 @@ def start_response_consumer() -> None:
         raise last_error
 
     def _handle_response(payload: dict) -> None:
-        """
-        Maneja una respuesta recibida del servicio de órdenes.
-        """
+        """Maneja una respuesta recibida del servicio de ordenes."""
         event_type = payload.get("event_type")
         # Si el evento es un push event, notifica a los suscriptores correspondientes sin actualizar el estado de la solicitud.
         if event_type in PUSH_EVENTS:
@@ -543,7 +557,7 @@ def start_response_consumer() -> None:
         if event_type not in RESPONSE_EVENTS:
             return
 
-        # Si el evento es una actualización de estado de orden, se notifica a los suscriptores correspondientes sin actualizar el 
+        # Si el evento es una actualización de estado de orden, se notifica a los suscriptores correspondientes sin actualizar el
         # estado de la solicitud, ya que este evento no corresponde a una respuesta directa a una solicitud del gateway.
         data = payload.get("data", {})
         request_id = data.get("requestId")
@@ -592,8 +606,8 @@ def start_response_consumer() -> None:
         key = _subscriber_key(record.user_id, record.client_id)
         status_code = data.get("statusCode")
 
-        # Si la respuesta indica éxito, se utiliza un mensaje de éxito específico para el tipo de evento; 
-        # si indica error, se utiliza el mensaje de error proporcionado o un mensaje genérico según el tipo de evento. 
+        # Si la respuesta indica éxito, se utiliza un mensaje de éxito específico para el tipo de evento;
+        # si indica error, se utiliza el mensaje de error proporcionado o un mensaje genérico según el tipo de evento.
         # Si el mensaje de error incluye un código de estado, se agrega al mensaje para mayor claridad.
         if ok:
             message = RESPONSE_SUCCESS_MESSAGE.get(event_type, "Completado")

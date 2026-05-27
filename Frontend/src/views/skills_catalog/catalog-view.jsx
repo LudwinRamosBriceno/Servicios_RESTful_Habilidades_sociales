@@ -32,7 +32,7 @@ export function CatalogView({ skills, onOrderClick }) {
   // Renderizar la vista del catálogo
   return (
     <main className="catalog-main">
-      
+
       {/* Encabezado */}
       <section className="catalog-header">
         <div className="catalog-header-content">
@@ -60,11 +60,11 @@ export function CatalogView({ skills, onOrderClick }) {
                 <th className="catalog-table-header catalog-table-header-action">Acción</th>
               </tr>
             </thead>
-            
+
             {/* Cuerpo de la tabla con habilidades */}
             <tbody>
               {skills.map((skill) => (
-                
+
                 // Filas de la tabla (nombre de habilidad, stock y botón de acción)
                 <tr
                   key={skill.id}
@@ -98,12 +98,12 @@ export function CatalogView({ skills, onOrderClick }) {
 
               ))}
             </tbody>
-            
+
           </table>
 
         </div>
       </section>
-      
+
     </main>
   )
 }

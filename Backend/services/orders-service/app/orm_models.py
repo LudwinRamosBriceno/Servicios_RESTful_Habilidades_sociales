@@ -1,14 +1,13 @@
+"""Modelos ORM para la gestión de órdenes en la base de datos."""
+
+from db import Base
 from sqlalchemy import Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from db import Base
-
 
 class OrderORM(Base):
-    """
-    Modelo ORM para la tabla de órdenes. Representa la estructura de la tabla "orders" en la base de datos.
-    Cada instancia de OrderORM corresponde a una fila en la tabla "orders".
-    """
+    """Modelo ORM para la tabla de órdenes."""
+
     __tablename__ = "orders"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)

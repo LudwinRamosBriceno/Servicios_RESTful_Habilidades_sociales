@@ -42,19 +42,19 @@ export function ProfileView({ user }) {
         </div>
 
         {skills.length === 0 ? (
-          
+
           // No hay habilidades adquiridas
           <div className="profile-empty-state">
             <p className="profile-empty-text">No has adquirido ninguna habilidad todavía.</p>
             <p className="profile-empty-text">Visita el Catálogo de Habilidades para realizar tu primer pedido.</p>
           </div>
-        
+
       ) : (
-          
+
           // Tabla de habilidades adquiridas
           <div className="profile-table-wrapper">
             <table className="profile-table">
-              
+
               {/* Encabezado de la tabla */}
               <thead className="profile-table-head">
                 <tr>
@@ -62,7 +62,7 @@ export function ProfileView({ user }) {
                   <th className="profile-table-header2">Puntos </th>
                 </tr>
               </thead>
-              
+
               {/* Cuerpo de la tabla con habilidades adquiridas */}
               <tbody>
                 {skills.map((skill) => (

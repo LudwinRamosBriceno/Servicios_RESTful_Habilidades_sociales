@@ -1,9 +1,11 @@
+"""Aplicación principal del microservicio de productos."""
+
 from fastapi import FastAPI, HTTPException
 
 from .controller import router as product_router
 from .messaging import publish_event, start_consumer
 from .repository import ProductRepository
-from .service import ProductService, EVENT_ORDER_CREATED
+from .service import EVENT_ORDER_CREATED, ProductService
 
 # Eventos de request/response para el gateway.
 EVENT_PRODUCTS_LIST_REQUESTED = "products.list.requested"
@@ -18,15 +20,11 @@ app.include_router(product_router)
 
 @app.on_event("startup")
 def start_event_consumers() -> None:
-    """
-    Arranca consumidores de eventos para validar inventario.
-    """
+    """Arranca consumidores de eventos para validar inventario."""
     service = ProductService(ProductRepository())
 
     def _handle_order_created(payload: dict) -> None:
-        """
-        Maneja el evento de orden creada para validar inventario y publicar eventos de confirmación o rechazo.
-        """
+        """Maneja el evento de orden creada para validar inventario."""
         if payload.get("event_type") != EVENT_ORDER_CREATED:
             return
         service.process_order_created(payload)
@@ -41,9 +39,7 @@ def start_event_consumers() -> None:
 
 @app.on_event("startup")
 def start_request_consumers() -> None:
-    """
-    Consume requests del gateway y publica respuestas.
-    """
+    """Consume requests del gateway y publica respuestas."""
     service = ProductService(ProductRepository())
 
     def _respond(
@@ -54,9 +50,7 @@ def start_request_consumers() -> None:
         error: str | None,
         status_code: int,
     ) -> None:
-        """
-        Publica un evento de respuesta con el resultado o error del procesamiento de un request.
-        """
+        """Publica un evento de respuesta con resultado o error."""
         publish_event(
             event_type,
             {
@@ -71,10 +65,7 @@ def start_request_consumers() -> None:
         )
 
     def _handle_request(payload: dict) -> None:
-        """
-        Maneja los eventos de request para listar o obtener productos, 
-        y publica eventos de respuesta con el resultado o error.
-        """
+        """Maneja requests para listar u obtener productos."""
         data = payload.get("data", {})
         event_type = payload.get("event_type")
         request_id = data.get("requestId")
@@ -103,8 +94,15 @@ def start_request_consumers() -> None:
             if event_type == EVENT_PRODUCTS_GET_REQUESTED:
                 product_id = data.get("productId")
                 result = service.get_product(product_id)
-                _respond(EVENT_PRODUCTS_GET_RESPONDED, request_id, user_id, result.model_dump(), None, 200)
-        
+                _respond(
+                    EVENT_PRODUCTS_GET_RESPONDED,
+                    request_id,
+                    user_id,
+                    result.model_dump(),
+                    None,
+                    200,
+                )
+
         # Si ocurre cualquier error en el procesamiento del request, responde con el error y el código de estado correspondiente.
         except Exception as exc:
             response_type = {
@@ -115,8 +113,10 @@ def start_request_consumers() -> None:
             # Si se pudo determinar el tipo de respuesta, responde con el mensaje de error y el código de estado.
             if response_type:
                 status_code = exc.status_code if isinstance(exc, HTTPException) else 500
-                _respond(response_type, request_id, user_id, None, str(exc), status_code)
-    
+                _respond(
+                    response_type, request_id, user_id, None, str(exc), status_code
+                )
+
     # Suscribe el consumidor a los eventos de request para listar y obtener productos.
     start_consumer(
         queue_name="products-requests",
@@ -127,7 +127,5 @@ def start_request_consumers() -> None:
 
 @app.get("/health")
 def healthcheck():
-    """
-    Endpoint para verificar que el servicio de productos está funcionando correctamente.
-    """
+    """Endpoint para verificar el estado del servicio."""
     return {"status": "ok", "service": "products-service"}

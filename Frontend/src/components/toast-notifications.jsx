@@ -43,7 +43,7 @@ function ToastItem({ toast, onDismiss }) {
     </div>
   )
 }
-  
+
 export function ToastContainer({ toasts, onDismiss }) {
   return (
     <div className="toast-container" aria-label="Notifications">

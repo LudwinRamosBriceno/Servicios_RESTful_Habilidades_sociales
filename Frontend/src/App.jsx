@@ -15,12 +15,12 @@ import { orderSkill } from '@/services/orders'
 function App() {
 
   // ----- Estados globales de la aplicación -----
-  
+
   const [isAuthenticated, setIsAuthenticated] = useState(false)           // Indica si el usuario está autenticado
   const [isRestoringSession, setIsRestoringSession] = useState(true)      // Indica si la aplicación está intentando restaurar una sesión existente
   const [user, setUser] = useState(null)                                  // Datos del usuario autenticado (id, name, etc.)
   const [currentView, setCurrentView] = useState('auth')                  // Vista actual: 'auth', 'profile', 'catalog', 'orders'
-  const [skills, setSkills] = useState([])                                // Catálogo de habilidades cargado desde el backend 
+  const [skills, setSkills] = useState([])                                // Catálogo de habilidades cargado desde el backend
   const [preSelectedSkillId, setPreSelectedSkillId] = useState(undefined) // ID de habilidad preseleccionada al navegar desde el catálogo a órdenes
 
   const { toasts, addToast, dismiss } = useToasts()                       // Manejo de notificaciones tipo toast para mostrar mensajes al usuario

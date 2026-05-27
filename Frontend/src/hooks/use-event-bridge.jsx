@@ -6,7 +6,7 @@ const DEFAULT_SSE_URL = `${API_BASE_URL}/events`
 
 // Hook para manejar la comunicación asíncrona (SSE) entre el frontend y el backend, ademas del estado de solicitudes pendientes
 export function useEventBridge({ enabled, addToast, setSkills, setUser, refreshUserData, refreshSkills }) {
-    
+
     const [pendingRequests, setPendingRequests] = useState([])      // Lista de solicitudes pendientes realizadas por el frontend y esperan respuesta
 
     // Cuando SSE llega, ejecuta las ref para actualizar App.jsx
@@ -18,12 +18,12 @@ export function useEventBridge({ enabled, addToast, setSkills, setUser, refreshU
     const refreshUserDataRef = useRef(refreshUserData)              // Apunta a refreshUserData para recargar los datos del usuario desde el servidor
     const refreshSkillsRef = useRef(refreshSkills)                  // Apunta a refreshSkills para recargar el catálogo de habilidades desde el servidor
     const handlePayloadRef = useRef(null)                           // Apunta a handlePayload para procesar los payloads recibidos por SSE
-    
+
     const resolvedRequestIdsRef = useRef(new Set())                 // Conjunto de IDs de solicitudes ya resueltas, evita procesar el mismo evento SSE varias veces
     const pollTimerIdsRef = useRef(new Map())                       // Mapa de requestId → timerId del polling, permite cancelar el timer cuando SSE responde primero
 
     // Sincroniza las refs cuando App.jsx se re-renderiza y entrega versiones nuevas de sus funciones
-    useEffect(() => { addToastRef.current = addToast }, [addToast])                 
+    useEffect(() => { addToastRef.current = addToast }, [addToast])
     useEffect(() => { setSkillsRef.current = setSkills }, [setSkills])
     useEffect(() => { setUserRef.current = setUser }, [setUser])
     useEffect(() => { refreshUserDataRef.current = refreshUserData }, [refreshUserData])
@@ -44,7 +44,7 @@ export function useEventBridge({ enabled, addToast, setSkills, setUser, refreshU
 
     // Función para iniciar el polling del estado de una solicitud asíncrona, se llama cuando se registra una nueva solicitud pendiente
     const pollRequestStatus = useCallback((requestId, type) => {
-        
+
         // Si no hay requestId o la solicitud ya fue resuelta, no hace nada
         if (!requestId || resolvedRequestIdsRef.current.has(requestId)) return
 
@@ -94,16 +94,16 @@ export function useEventBridge({ enabled, addToast, setSkills, setUser, refreshU
 
     // Función para registrar una nueva solicitud pendiente, se llama cuando el frontend envía una solicitud asíncrona al backend
     const registerPendingRequest = useCallback((response, type) => {
-        
+
         // Extrae el requestId de la respuesta sincrona del backend (ACK)
         const requestId = response?.requestId || response?.id
-        
+
         // Si no se recibe un requestId, muestra una advertencia y no registra la solicitud como pendiente
         if (!requestId) {
             console.warn('ACK recibido sin requestId. No se pudo registrar como pendiente.')
             return null
         }
-        
+
         // Agrega la solicitud pendiente a la lista de pendingRequests
         setPendingRequests((prev) => [ ...prev, { requestId, type, createdAt: new Date().toISOString(), }, ])
 
@@ -271,7 +271,7 @@ export function useEventBridge({ enabled, addToast, setSkills, setUser, refreshU
 6. addToastRef.current se usa para mostrar notificaciones con el nuevo contexto de App.jsx, evitando reconexiones SSE
 
 En respuestas posteriores del backend:
-El ciclo se repite: 
+El ciclo se repite:
                      SSE llega → refs del hook ejecutan funciones actualizadas de App.jsx
                      Las refs siempre apuntan a las versiones más recientes gracias a los useEffect
                      El SSE nunca se reinicia, solo consume las refs actualizadas en cada respuesta */
