@@ -1,14 +1,13 @@
-"""create orders table
+"""Create orders table.
 
 Revision ID: 0001_create_orders_table
-Revises: 
+Revises:
 Create Date: 2026-04-18 00:00:00
 
 """
 
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "0001_create_orders_table"
@@ -18,6 +17,7 @@ depends_on = None
 
 
 def upgrade() -> None:
+    """Apply schema changes for orders."""
     op.create_table(
         "orders",
         sa.Column("id", sa.String(length=64), nullable=False),
@@ -32,4 +32,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    """Revert schema changes for orders."""
     op.drop_table("orders")

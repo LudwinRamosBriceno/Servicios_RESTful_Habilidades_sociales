@@ -1,3 +1,5 @@
+"""Módulo de mensajería para publicar y consumir eventos en RabbitMQ."""
+
 import json
 import os
 import threading
@@ -14,23 +16,28 @@ RABBITMQ_URL = os.getenv("RABBITMQ_URL", "amqp://guest:guest@rabbitmq:5672/")
 
 
 def _utc_now_iso() -> str:
-    """
-    Obtiene timestamp UTC en formato ISO 8601.
-    """
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    """Obtiene timestamp UTC en formato ISO 8601."""
+    return (
+        datetime.now(timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def _connect() -> pika.BlockingConnection:
-    """
-    Crea la conexion con RabbitMQ usando la URL configurada.
-    """
+    """Crea la conexion con RabbitMQ usando la URL configurada."""
     return pika.BlockingConnection(pika.URLParameters(RABBITMQ_URL))
 
 
-def publish_event(event_type: str, data: dict, *, version: str = "v1", correlation_id: str | None = None) -> None:
-    """
-    Publica un evento en el exchange topic de RabbitMQ.
-    """
+def publish_event(
+    event_type: str,
+    data: dict,
+    *,
+    version: str = "v1",
+    correlation_id: str | None = None,
+) -> None:
+    """Publica un evento en el exchange topic de RabbitMQ."""
     event = {
         "event_type": event_type,
         "version": version,
@@ -39,7 +46,9 @@ def publish_event(event_type: str, data: dict, *, version: str = "v1", correlati
     }
     connection = _connect()
     channel = connection.channel()
-    channel.exchange_declare(exchange=EXCHANGE_NAME, exchange_type=EXCHANGE_TYPE, durable=True)
+    channel.exchange_declare(
+        exchange=EXCHANGE_NAME, exchange_type=EXCHANGE_TYPE, durable=True
+    )
     props = pika.BasicProperties(
         content_type="application/json",
         delivery_mode=2,
@@ -54,19 +63,24 @@ def publish_event(event_type: str, data: dict, *, version: str = "v1", correlati
     connection.close()
 
 
-def start_consumer(queue_name: str, routing_keys: Iterable[str], handler: Callable[[dict], None]) -> None:
-    """
-    Inicia un consumidor en segundo plano para la cola especificada.
-    """
+def start_consumer(
+    queue_name: str, routing_keys: Iterable[str], handler: Callable[[dict], None]
+) -> None:
+    """Inicia un consumidor en segundo plano para la cola especificada."""
+
     def _run() -> None:
         while True:
             try:
                 connection = _connect()
                 channel = connection.channel()
-                channel.exchange_declare(exchange=EXCHANGE_NAME, exchange_type=EXCHANGE_TYPE, durable=True)
+                channel.exchange_declare(
+                    exchange=EXCHANGE_NAME, exchange_type=EXCHANGE_TYPE, durable=True
+                )
                 channel.queue_declare(queue=queue_name, durable=True)
                 for key in routing_keys:
-                    channel.queue_bind(exchange=EXCHANGE_NAME, queue=queue_name, routing_key=key)
+                    channel.queue_bind(
+                        exchange=EXCHANGE_NAME, queue=queue_name, routing_key=key
+                    )
 
                 def _on_message(ch, method, _properties, body) -> None:
                     try:

@@ -1,3 +1,5 @@
+"""Módulo de mensajería para publicar y consumir eventos en RabbitMQ."""
+
 import json
 import os
 import threading
@@ -13,23 +15,28 @@ RABBITMQ_URL = os.getenv("RABBITMQ_URL", "amqp://guest:guest@rabbitmq:5672/")
 
 
 def _utc_now_iso() -> str:
-    """
-    Obtiene la hora actual en formato ISO 8601.
-    """
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    """Obtiene la hora actual en formato ISO 8601."""
+    return (
+        datetime.now(timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def _connect() -> pika.BlockingConnection:
-    """
-    Crea una conexión a RabbitMQ utilizando la URL de conexión configurada.
-    """
+    """Crea una conexión a RabbitMQ con la URL configurada."""
     return pika.BlockingConnection(pika.URLParameters(RABBITMQ_URL))
 
 
-def publish_event(event_type: str, data: dict, *, version: str = "v1", correlation_id: str | None = None) -> None:
-    """
-    Publica un evento en el exchange de RabbitMQ.
-    """
+def publish_event(
+    event_type: str,
+    data: dict,
+    *,
+    version: str = "v1",
+    correlation_id: str | None = None,
+) -> None:
+    """Publica un evento en el exchange de RabbitMQ."""
     event = {
         "event_type": event_type,
         "version": version,
@@ -38,7 +45,9 @@ def publish_event(event_type: str, data: dict, *, version: str = "v1", correlati
     }
     connection = _connect()
     channel = connection.channel()
-    channel.exchange_declare(exchange=EXCHANGE_NAME, exchange_type=EXCHANGE_TYPE, durable=True)
+    channel.exchange_declare(
+        exchange=EXCHANGE_NAME, exchange_type=EXCHANGE_TYPE, durable=True
+    )
     props = pika.BasicProperties(
         content_type="application/json",
         delivery_mode=2,
@@ -53,29 +62,29 @@ def publish_event(event_type: str, data: dict, *, version: str = "v1", correlati
     connection.close()
 
 
-def start_consumer(queue_name: str, routing_keys: Iterable[str], handler: Callable[[dict], None]) -> None:
-    """
-    Inicia un consumidor de RabbitMQ en un hilo separado que escucha en la cola especificada y maneja mensajes con el handler proporcionado.
-    """
+def start_consumer(
+    queue_name: str, routing_keys: Iterable[str], handler: Callable[[dict], None]
+) -> None:
+    """Inicia un consumidor de RabbitMQ en un hilo separado."""
+
     def _run() -> None:
-        """
-        Función que ejecuta el consumidor de RabbitMQ.
-        """
+        """Ejecuta el consumidor de RabbitMQ."""
         while True:
             # Intenta conectarse a RabbitMQ y consumir mensajes.
             try:
                 connection = _connect()
                 channel = connection.channel()
-                channel.exchange_declare(exchange=EXCHANGE_NAME, exchange_type=EXCHANGE_TYPE, durable=True)
+                channel.exchange_declare(
+                    exchange=EXCHANGE_NAME, exchange_type=EXCHANGE_TYPE, durable=True
+                )
                 channel.queue_declare(queue=queue_name, durable=True)
                 for key in routing_keys:
-                    channel.queue_bind(exchange=EXCHANGE_NAME, queue=queue_name, routing_key=key)
+                    channel.queue_bind(
+                        exchange=EXCHANGE_NAME, queue=queue_name, routing_key=key
+                    )
 
                 def _on_message(ch, method, _properties, body) -> None:
-                    """
-                    Manejador de mensajes que se ejecuta cuando se recibe un mensaje en la cola.
-                    Intenta procesar el mensaje con el handler proporcionado y reconoce o rechaza el mensaje
-                    """
+                    """Procesa el mensaje y confirma o rechaza segun corresponda."""
                     try:
                         payload = json.loads(body)
                         handler(payload)
@@ -83,13 +92,14 @@ def start_consumer(queue_name: str, routing_keys: Iterable[str], handler: Callab
                     except Exception as exc:
                         print(f"[messaging] handler error: {exc}")
                         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+
                 # Configura el consumidor para procesar un mensaje a la vez y comienza a consumir mensajes de la cola.
                 channel.basic_qos(prefetch_count=1)
                 channel.basic_consume(queue=queue_name, on_message_callback=_on_message)
                 channel.start_consuming()
 
-            # Si ocurre un error en la conexión o el consumo de mensajes, 
-            # imprime el error y espera 5 segundos antes de intentar reconectar.    
+            # Si ocurre un error en la conexión o el consumo de mensajes,
+            # imprime el error y espera 5 segundos antes de intentar reconectar.
             except Exception as exc:
                 print(f"[messaging] consumer error: {exc}")
                 time.sleep(5)

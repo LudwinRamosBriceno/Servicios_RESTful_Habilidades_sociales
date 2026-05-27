@@ -1,4 +1,4 @@
-"""create users table
+"""Create users table.
 
 Revision ID: 0001_create_users_table
 Revises:
@@ -6,9 +6,8 @@ Create Date: 2026-04-20 00:00:00
 
 """
 
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 revision = "0001_create_users_table"
 down_revision = None
@@ -17,6 +16,7 @@ depends_on = None
 
 
 def upgrade() -> None:
+    """Apply schema changes for users."""
     op.create_table(
         "users",
         sa.Column("id", sa.String(length=64), nullable=False),
@@ -31,4 +31,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    """Revert schema changes for users."""
     op.drop_table("users")

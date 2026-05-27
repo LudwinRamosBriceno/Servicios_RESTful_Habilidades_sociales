@@ -1,3 +1,5 @@
+"""Configuración de la base de datos usando SQLAlchemy ORM."""
+
 import os
 
 from sqlalchemy import create_engine
@@ -12,9 +14,15 @@ DATABASE_URL = os.getenv(
 # Crear el motor de la base de datos
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
+
 # Declaracion de la base para los modelos
 class Base(DeclarativeBase):
+    """Clase base para los modelos ORM de SQLAlchemy."""
+
     pass
 
+
 # Crear la sesión de la base de datos
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, class_=Session)
+SessionLocal = sessionmaker(
+    bind=engine, autoflush=False, autocommit=False, class_=Session
+)

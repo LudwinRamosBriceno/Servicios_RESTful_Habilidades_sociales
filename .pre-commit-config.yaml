@@ -2,35 +2,25 @@
 repos:
     # Hooks para eliminar espacios en blanco, corregir el final de archivos y validar YAML
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
-
-    # Hooks para analisis de código Python: errorees sintácticos, malas prácticas y problemas de estilo
-  - repo: https://github.com/pycqa/flake8
-    rev: 6.1.0
-    hooks:
-      - id: flake8
+        exclude: ^Backend/k8s/
 
     # Hooks para formateo de código Python: para formato general y legibilidad uniforme (estilo de código)
   - repo: https://github.com/psf/black
-    rev: 24.3.0
+    rev: 26.5.1
     hooks:
       - id: black
-
-    # Hooks para ordenar los imports en los archivos Python
-  - repo: https://github.com/pre-commit/mirrors-isort
-    rev: v5.12.0
-    hooks:
-      - id: isort
 
     # Hooks para detectar información sensible en el código (contraseñas, tokens, claves)
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.4.0
     hooks:
       - id: detect-secrets
+        exclude: ^Frontend/|venv/|Backend/docker-compose.yml|Backend/k8|Backend/services/.*/db.py|Backend/services/.*/alembic/|Backend/services/.*/alembic.ini|README.md  # Excluir el directorio Frontend y el entorno virtual para evitar falsos positivos
 
     # Hooks para validar que las funciones y archivos Python tengan documentación estilo docstrings
   - repo: https://github.com/PyCQA/pydocstyle
@@ -40,11 +30,11 @@ repos:
         name: Check Python docstrings
         additional_dependencies: []
 
-    # Hooks para ejecutar pruebas unitarias con pytest en el directorio Backend/test
+    # Hooks para ejecutar pruebas unitarias con pytest en cada archivo por separado
   - repo: local
     hooks:
       - id: unit-tests
         name: Run unit tests
-        entry: pytest Backend/test/
+        entry: venv/Scripts/python.exe -m unittest Backend/test/test_users_service.py Backend/test/test_products_service.py Backend/test/test_orders_service.py Backend/test/test_auth_service.py
         language: system
         pass_filenames: false

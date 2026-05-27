@@ -14,4 +14,3 @@ Plataforma de microservicios REST para gestionar habilidades sociales como produ
 ```bash
 kubectl port-forward service/api-gateway 8080:8080
 ```
-

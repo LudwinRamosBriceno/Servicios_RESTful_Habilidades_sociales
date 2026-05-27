@@ -1,3 +1,5 @@
+"""Configuración de la base de datos para el API Gateway."""
+
 import os
 
 from sqlalchemy import create_engine
@@ -14,11 +16,12 @@ engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
 
 class Base(DeclarativeBase):
-    """
-    Base declarativa para modelos ORM del gateway.
-    """
+    """Base declarativa para modelos ORM del gateway."""
+
     pass
 
 
 # Fabrica de sesiones para operaciones en la base de datos.
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, class_=Session)
+SessionLocal = sessionmaker(
+    bind=engine, autoflush=False, autocommit=False, class_=Session
+)

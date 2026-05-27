@@ -1,3 +1,5 @@
+"""Módulo de mensajería para publicar y consumir eventos de RabbitMQ."""
+
 import json
 import os
 import threading
@@ -14,23 +16,28 @@ RABBITMQ_URL = os.getenv("RABBITMQ_URL", "amqp://guest:guest@rabbitmq:5672/")
 
 
 def _utc_now_iso() -> str:
-    """
-    Obtiene la fecha y hora actual en formato ISO 8601 con zona horaria UTC, sin microsegundos,
-    """
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    """Obtiene la fecha y hora actual en ISO 8601 UTC sin microsegundos."""
+    return (
+        datetime.now(timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def _connect() -> pika.BlockingConnection:
-    """
-    Crea una conexión a RabbitMQ utilizando la URL de conexión configurada.
-    """
+    """Crea una conexión a RabbitMQ con la URL configurada."""
     return pika.BlockingConnection(pika.URLParameters(RABBITMQ_URL))
 
 
-def publish_event(event_type: str, data: dict, *, version: str = "v1", correlation_id: str | None = None) -> None:
-    """
-    Publica un evento en el intercambio de RabbitMQ.
-    """
+def publish_event(
+    event_type: str,
+    data: dict,
+    *,
+    version: str = "v1",
+    correlation_id: str | None = None,
+) -> None:
+    """Publica un evento en el intercambio de RabbitMQ."""
     event = {
         "event_type": event_type,
         "version": version,
@@ -39,7 +46,9 @@ def publish_event(event_type: str, data: dict, *, version: str = "v1", correlati
     }
     connection = _connect()
     channel = connection.channel()
-    channel.exchange_declare(exchange=EXCHANGE_NAME, exchange_type=EXCHANGE_TYPE, durable=True)
+    channel.exchange_declare(
+        exchange=EXCHANGE_NAME, exchange_type=EXCHANGE_TYPE, durable=True
+    )
     props = pika.BasicProperties(
         content_type="application/json",
         delivery_mode=2,
@@ -54,28 +63,29 @@ def publish_event(event_type: str, data: dict, *, version: str = "v1", correlati
     connection.close()
 
 
-def start_consumer(queue_name: str, routing_keys: Iterable[str], handler: Callable[[dict], None]) -> None:
-    """
-    Inicia un consumidor de RabbitMQ en un hilo separado que escucha en la cola especificada y maneja mensajes con el handler proporcionado.
-    """
+def start_consumer(
+    queue_name: str, routing_keys: Iterable[str], handler: Callable[[dict], None]
+) -> None:
+    """Inicia un consumidor de RabbitMQ en un hilo separado."""
+
     def _run() -> None:
-        """
-        Conecta a RabbitMQ, declara el intercambio y la cola, y se suscribe a los mensajes que coincidan con las claves de enrutamiento especificadas.
-        """
+        """Conecta a RabbitMQ y consume mensajes con reconexion."""
         while True:
             # Intenta establecer la conexión y consumir mensajes.
             try:
                 connection = _connect()
                 channel = connection.channel()
-                channel.exchange_declare(exchange=EXCHANGE_NAME, exchange_type=EXCHANGE_TYPE, durable=True)
+                channel.exchange_declare(
+                    exchange=EXCHANGE_NAME, exchange_type=EXCHANGE_TYPE, durable=True
+                )
                 channel.queue_declare(queue=queue_name, durable=True)
                 for key in routing_keys:
-                    channel.queue_bind(exchange=EXCHANGE_NAME, queue=queue_name, routing_key=key)
+                    channel.queue_bind(
+                        exchange=EXCHANGE_NAME, queue=queue_name, routing_key=key
+                    )
 
                 def _on_message(ch, method, _properties, body) -> None:
-                    """
-                    Maneja los mensajes recibidos del broker de mensajería.
-                    """
+                    """Maneja los mensajes recibidos del broker de mensajeria."""
                     try:
                         payload = json.loads(body)
                         handler(payload)
@@ -87,13 +97,13 @@ def start_consumer(queue_name: str, routing_keys: Iterable[str], handler: Callab
                 channel.basic_qos(prefetch_count=1)
                 channel.basic_consume(queue=queue_name, on_message_callback=_on_message)
                 channel.start_consuming()
-            
-            # Si ocurre cualquier error en la conexión o consumo, se imprime el error 
+
+            # Si ocurre cualquier error en la conexión o consumo, se imprime el error
             # y se espera 5 segundos antes de intentar reconectar.
             except Exception as exc:
                 print(f"[messaging] consumer error: {exc}")
                 time.sleep(5)
-    
+
     # Inicia el hilo del consumidor como un daemon para que se ejecute en segundo plano.
     thread = threading.Thread(target=_run, daemon=True)
     thread.start()

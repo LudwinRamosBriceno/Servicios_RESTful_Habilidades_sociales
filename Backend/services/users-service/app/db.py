@@ -1,3 +1,5 @@
+"""Configuración de base de datos para users-service con SQLAlchemy ORM."""
+
 import os
 
 from sqlalchemy import create_engine
@@ -15,9 +17,12 @@ engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
 
 class Base(DeclarativeBase):
-    # Base declarativa para todos los modelos ORM del servicio.
+    """Base declarativa para todos los modelos ORM del servicio."""
+
     pass
 
 
 # Fabrica de sesiones: cada uso debe controlar commit/rollback de forma explicita.
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, class_=Session)
+SessionLocal = sessionmaker(
+    bind=engine, autoflush=False, autocommit=False, class_=Session
+)

@@ -1,10 +1,13 @@
+"""Aplicación principal del microservicio de usuarios."""
+
 from fastapi import FastAPI, HTTPException
 
+from .db import SessionLocal
 from .controller import router as user_router
 from .messaging import publish_event, start_consumer
-from .repository import UserRepository
-from .service import UserService, EVENT_INVENTORY_CONFIRMED
 from .models import CreateUserRequest
+from .repository import UserRepository
+from .service import EVENT_INVENTORY_CONFIRMED, UserService
 
 # Eventos de request/response para el gateway.
 EVENT_USERS_LIST_REQUESTED = "users.list.requested"
@@ -22,11 +25,8 @@ app.include_router(user_router)
 
 @app.on_event("startup")
 def start_event_consumers() -> None:
-    """
-    Arranca consumidores de eventos para asignar habilidades.
-    En este caso, escucha eventos de inventario confirmado para otorgar puntos al usuario.
-    """
-    service = UserService(UserRepository())
+    """Arranca consumidores de eventos para asignar habilidades."""
+    service = UserService(UserRepository(SessionLocal))
 
     def _handle_inventory_confirmed(payload: dict) -> None:
         if payload.get("event_type") != EVENT_INVENTORY_CONFIRMED:
@@ -42,10 +42,8 @@ def start_event_consumers() -> None:
 
 @app.on_event("startup")
 def start_request_consumers() -> None:
-    """
-    Consume requests del gateway y publica respuestas.
-    """
-    service = UserService(UserRepository())
+    """Consume requests del gateway y publica respuestas."""
+    service = UserService(UserRepository(SessionLocal))
 
     def _respond(
         event_type: str,
@@ -55,9 +53,7 @@ def start_request_consumers() -> None:
         error: str | None,
         status_code: int,
     ) -> None:
-        """
-        Publica un evento de respuesta con el resultado o error del procesamiento de un request.
-        """
+        """Publica un evento de respuesta con resultado o error."""
         publish_event(
             event_type,
             {
@@ -72,10 +68,7 @@ def start_request_consumers() -> None:
         )
 
     def _handle_request(payload: dict) -> None:
-        """
-        Maneja los eventos de request para listar, obtener o crear usuarios, 
-        y publica eventos de respuesta con el resultado o error.
-        """
+        """Maneja requests para listar, obtener o crear usuarios."""
         data = payload.get("data", {})
         event_type = payload.get("event_type")
         request_id = data.get("requestId")
@@ -84,7 +77,7 @@ def start_request_consumers() -> None:
         # Si no hay requestId, no se puede responder, así que se ignora el mensaje.
         if not request_id:
             return
-        
+
         # Intenta procesar el request según su tipo y responde con el resultado o error.
         try:
             # Procesa request de listar usuarios.
@@ -103,7 +96,14 @@ def start_request_consumers() -> None:
             if event_type == EVENT_USERS_GET_REQUESTED:
                 target_user_id = data.get("targetUserId")
                 result = service.get_user(target_user_id)
-                _respond(EVENT_USERS_GET_RESPONDED, request_id, user_id, result.model_dump(), None, 200)
+                _respond(
+                    EVENT_USERS_GET_RESPONDED,
+                    request_id,
+                    user_id,
+                    result.model_dump(),
+                    None,
+                    200,
+                )
                 return
             # Procesa request de crear un nuevo usuario.
             if event_type == EVENT_USERS_CREATE_REQUESTED:
@@ -113,8 +113,15 @@ def start_request_consumers() -> None:
                     "password": data.get("password"),
                 }
                 result = service.create_user(CreateUserRequest(**create_payload))
-                _respond(EVENT_USERS_CREATE_RESPONDED, request_id, user_id, result.model_dump(), None, 200)
-        
+                _respond(
+                    EVENT_USERS_CREATE_RESPONDED,
+                    request_id,
+                    user_id,
+                    result.model_dump(),
+                    None,
+                    200,
+                )
+
         # Si ocurre cualquier error durante el procesamiento, responde con el mensaje de error y código correspondiente.
         except Exception as exc:
             response_type = {
@@ -125,19 +132,23 @@ def start_request_consumers() -> None:
 
             if response_type:
                 status_code = exc.status_code if isinstance(exc, HTTPException) else 500
-                _respond(response_type, request_id, user_id, None, str(exc), status_code)
+                _respond(
+                    response_type, request_id, user_id, None, str(exc), status_code
+                )
 
     # Arranca el consumidor para manejar los eventos de request relacionados con usuarios.
     start_consumer(
         queue_name="users-requests",
-        routing_keys=[EVENT_USERS_LIST_REQUESTED, EVENT_USERS_GET_REQUESTED, EVENT_USERS_CREATE_REQUESTED],
+        routing_keys=[
+            EVENT_USERS_LIST_REQUESTED,
+            EVENT_USERS_GET_REQUESTED,
+            EVENT_USERS_CREATE_REQUESTED,
+        ],
         handler=_handle_request,
     )
 
 
 @app.get("/health")
 def healthcheck():
-    """
-    Endpoint para verificar disponibilidad del servicio.
-    """
+    """Endpoint para verificar disponibilidad del servicio."""
     return {"status": "ok", "service": "users-service"}

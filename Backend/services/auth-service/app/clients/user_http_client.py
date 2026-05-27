@@ -1,15 +1,20 @@
+"""Cliente HTTP para consultar credenciales en users-service."""
+
 import httpx
 from fastapi import HTTPException, status
-
-from models import AuthenticatedUser
+from app.models import AuthenticatedUser
 
 
 class UserHttpClient:
+    """Cliente HTTP para validar credenciales con users-service."""
+
     def __init__(self, base_url: str, timeout_seconds: float = 5.0) -> None:
+        """Inicializa el cliente con base URL y timeout."""
         self._base_url = base_url.rstrip("/")
         self._timeout = timeout_seconds
 
     def verify_credentials(self, email: str, password: str) -> AuthenticatedUser:
+        """Valida credenciales y retorna el usuario autenticado."""
         body = {"email": email, "password": password}
         try:
             response = httpx.post(
@@ -24,7 +29,10 @@ class UserHttpClient:
             ) from exc
 
         if response.status_code == status.HTTP_401_UNAUTHORIZED:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenciales invalidas")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Credenciales invalidas",
+            )
         if response.status_code >= 400:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

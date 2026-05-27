@@ -1,27 +1,22 @@
+"""Repositorio de usuarios persistente con SQLAlchemy ORM."""
+
 from typing import List
 
+from app.models import User
+from app.orm_models import UserORM
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from models import User
-from orm_models import UserORM
-
 
 class UserRepository:
-    """
-    Capa de persistencia para operaciones CRUD de usuarios.
-    """
+    """Capa de persistencia para operaciones CRUD de usuarios."""
 
     def __init__(self, session_factory):
-        """
-        Inicializa la instancia del repositorio con una fábrica de sesiones.
-        """
+        """Inicializa el repositorio con una fabrica de sesiones."""
         self._session_factory = session_factory
 
     def create(self, user: User) -> User:
-        """
-        Inserta un nuevo usuario en base de datos.
-        """
+        """Inserta un nuevo usuario en base de datos."""
         with self._session_factory() as session:
             session: Session
             session.add(
@@ -38,9 +33,7 @@ class UserRepository:
         return user
 
     def get_by_id(self, user_id: str) -> User | None:
-        """
-        Busca un usuario por su ID.
-        """
+        """Busca un usuario por su ID."""
         statement = select(UserORM).where(UserORM.id == user_id)
         with self._session_factory() as session:
             session: Session
@@ -51,9 +44,7 @@ class UserRepository:
         return self._orm_to_user(orm_user)
 
     def get_by_name(self, name: str) -> User | None:
-        """
-        Busca un usuario por nombre sin distinguir mayusculas/minusculas.
-        """
+        """Busca un usuario por nombre sin distinguir mayusculas/minusculas."""
         statement = select(UserORM).where(func.lower(UserORM.name) == name.lower())
         with self._session_factory() as session:
             session: Session
@@ -64,22 +55,18 @@ class UserRepository:
         return self._orm_to_user(orm_user)
 
     def get_by_email(self, email: str) -> User | None:
-        """
-        Busca un usuario por email sin distinguir mayusculas/minusculas.
-        """
+        """Busca un usuario por email sin distinguir mayusculas/minusculas."""
         statement = select(UserORM).where(func.lower(UserORM.email) == email.lower())
         with self._session_factory() as session:
             session: Session
             orm_user = session.scalars(statement).first()
-        
+
         if not orm_user:
             return None
         return self._orm_to_user(orm_user)
 
     def find_all(self) -> List[User]:
-        """
-        Recupera todos los usuarios registrados.
-        """
+        """Recupera todos los usuarios registrados."""
         statement = select(UserORM)
         with self._session_factory() as session:
             session: Session
@@ -88,9 +75,7 @@ class UserRepository:
         return [self._orm_to_user(orm_user) for orm_user in orm_users]
 
     def update(self, user: User) -> User:
-        """
-        Actualiza un usuario existente por ID.
-        """
+        """Actualiza un usuario existente por ID."""
         with self._session_factory() as session:
             session: Session
             existing = session.get(UserORM, user.id)
@@ -108,9 +93,7 @@ class UserRepository:
 
     @staticmethod
     def _orm_to_user(orm_user: UserORM) -> User:
-        """
-        Convierte entidad ORM a modelo de dominio usado por la capa de servicio.
-        """
+        """Convierte entidad ORM a modelo de dominio."""
         return User(
             id=orm_user.id,
             name=orm_user.name,

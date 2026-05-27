@@ -1,12 +1,13 @@
+"""Modelo ORM para la tabla de productos con SQLAlchemy."""
+
+from app.db import Base
 from sqlalchemy import Boolean, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from db import Base
 
 class ProductORM(Base):
-    """
-    Modelo ORM para la tabla de productos. Este modelo se utiliza para mapear los objetos de Python a las filas de la tabla en la base de datos.
-    """
+    """Modelo ORM para la tabla de productos."""
+
     __tablename__ = "products"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)

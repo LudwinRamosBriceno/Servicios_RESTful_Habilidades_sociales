@@ -81,7 +81,7 @@ export function AuthView({ onLogin, onRegister, addToast }) {
   return (
     <main className="auth-main">
       <div className="auth-container">
-        
+
         {/* Encabezado */}
         <div className="auth-header">
           <div className="auth-header-icon">
@@ -103,7 +103,7 @@ export function AuthView({ onLogin, onRegister, addToast }) {
           /* Formulario de inicio de sesión */
           <div className="auth-form-container">
             <form onSubmit={handleLoginSubmit} className="auth-form" noValidate>
-              
+
               {/* Dirección de email */}
               <div className="auth-field">
                 <label htmlFor="email" className="auth-label">Correo electrónico</label>
@@ -157,7 +157,7 @@ export function AuthView({ onLogin, onRegister, addToast }) {
           /* Formulario de registro */
           <div className="auth-form-container">
             <form onSubmit={handleRegisterSubmit} className="auth-form" noValidate>
-              
+
               {/* Nombre completo */}
               <div className="auth-field">
                 <label htmlFor="name" className="auth-label">Nombre Completo</label>
