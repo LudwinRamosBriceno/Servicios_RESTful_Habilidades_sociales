@@ -1,0 +1,802 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "NovaLink API Gateway",
+    "version": "1.0.0",
+    "description": "API publica del gateway. Las operaciones de dominio responden con una solicitud PENDING y el resultado final se consulta por SSE o por estado de request."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "API Gateway local"
+    }
+  ],
+  "tags": [
+    {
+      "name": "auth",
+      "description": "Autenticacion y sesion"
+    },
+    {
+      "name": "events",
+      "description": "Canal de eventos SSE"
+    },
+    {
+      "name": "products",
+      "description": "Solicitudes asincronas de productos"
+    },
+    {
+      "name": "users",
+      "description": "Solicitudes asincronas de usuarios"
+    },
+    {
+      "name": "orders",
+      "description": "Solicitudes asincronas de ordenes"
+    },
+    {
+      "name": "requests",
+      "description": "Estado de solicitudes asincronas"
+    },
+    {
+      "name": "health",
+      "description": "Salud del servicio"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["health"],
+        "summary": "Verifica la salud del API Gateway",
+        "responses": {
+          "200": {
+            "description": "Servicio disponible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                },
+                "example": {
+                  "status": "ok",
+                  "service": "api-gateway"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["auth"],
+        "summary": "Inicia sesion",
+        "description": "Proxy sincrono hacia auth-service. Si las credenciales son validas, propaga la cookie de sesion.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              },
+              "example": {
+                "email": "ana@example.com",
+                "password": "secret"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sesion iniciada",
+            "headers": {
+              "Set-Cookie": {
+                "description": "Cookie HTTP-only con el identificador de sesion.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/api/auth/session": {
+      "get": {
+        "tags": ["auth"],
+        "summary": "Valida la sesion actual",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SessionCookie"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sesion valida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": ["auth"],
+        "summary": "Cierra sesion",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SessionCookie"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sesion cerrada",
+            "headers": {
+              "Set-Cookie": {
+                "description": "Cookie eliminada.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/api/events": {
+      "get": {
+        "tags": ["events"],
+        "summary": "Abre el canal SSE de respuestas asincronas",
+        "description": "Requiere cookie de sesion o encabezado X-Client-Id. Emite eventos text/event-stream con respuestas de requests asincronas.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SessionCookie"
+          },
+          {
+            "$ref": "#/components/parameters/XClientId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stream SSE abierto",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "example": "data: {\"type\":\"products-loaded\",\"requestId\":\"req_abc123\",\"status\":\"COMPLETED\"}\\n\\n"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/api/products": {
+      "get": {
+        "tags": ["products"],
+        "summary": "Solicita el listado de productos",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SessionCookie"
+          },
+          {
+            "$ref": "#/components/parameters/XClientId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solicitud recibida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingRequestResponse"
+                },
+                "example": {
+                  "type": "products-loaded",
+                  "requestId": "req_abc123",
+                  "status": "PENDING",
+                  "message": "Solicitud de lista de productos recibida"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/products/{product_id}": {
+      "get": {
+        "tags": ["products"],
+        "summary": "Solicita el detalle de un producto",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProductId"
+          },
+          {
+            "$ref": "#/components/parameters/SessionCookie"
+          },
+          {
+            "$ref": "#/components/parameters/XClientId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solicitud recibida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingRequestResponse"
+                },
+                "example": {
+                  "type": "product-loaded",
+                  "requestId": "req_abc123",
+                  "status": "PENDING",
+                  "message": "Solicitud de detalle de producto recibida"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/users": {
+      "get": {
+        "tags": ["users"],
+        "summary": "Solicita el listado de usuarios",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SessionCookie"
+          },
+          {
+            "$ref": "#/components/parameters/XClientId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solicitud recibida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingRequestResponse"
+                },
+                "example": {
+                  "type": "users-loaded",
+                  "requestId": "req_abc123",
+                  "status": "PENDING",
+                  "message": "Solicitud recibida"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "tags": ["users"],
+        "summary": "Solicita la creacion de un usuario",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SessionCookie"
+          },
+          {
+            "$ref": "#/components/parameters/XClientId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Solicitud recibida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingRequestResponse"
+                },
+                "example": {
+                  "type": "user-created",
+                  "requestId": "req_abc123",
+                  "status": "PENDING",
+                  "message": "Usuario creado, pendiente de confirmacion"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/users/{user_id}": {
+      "get": {
+        "tags": ["users"],
+        "summary": "Solicita el detalle de un usuario",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/UserId"
+          },
+          {
+            "$ref": "#/components/parameters/SessionCookie"
+          },
+          {
+            "$ref": "#/components/parameters/XClientId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solicitud recibida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingRequestResponse"
+                },
+                "example": {
+                  "type": "user-loaded",
+                  "requestId": "req_abc123",
+                  "status": "PENDING",
+                  "message": "Solicitud de informacion de usuario recibida"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/orders": {
+      "post": {
+        "tags": ["orders"],
+        "summary": "Solicita la creacion de una orden",
+        "description": "Requiere sesion de usuario. El gateway fuerza userId al usuario autenticado.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SessionCookie"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Solicitud recibida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingRequestResponse"
+                },
+                "example": {
+                  "type": "order-created",
+                  "requestId": "req_abc123",
+                  "status": "PENDING",
+                  "message": "Orden creada, pendiente de inventario"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/orders/{order_id}": {
+      "get": {
+        "tags": ["orders"],
+        "summary": "Solicita el detalle de una orden",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrderId"
+          },
+          {
+            "$ref": "#/components/parameters/SessionCookie"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solicitud recibida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingRequestResponse"
+                },
+                "example": {
+                  "type": "order-loaded",
+                  "requestId": "req_abc123",
+                  "status": "PENDING",
+                  "message": "Solicitud de informacion de pedido recibida"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/orders/user/{user_id}": {
+      "get": {
+        "tags": ["orders"],
+        "summary": "Solicita las ordenes de un usuario",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/UserId"
+          },
+          {
+            "$ref": "#/components/parameters/SessionCookie"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solicitud recibida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingRequestResponse"
+                },
+                "example": {
+                  "type": "orders-loaded",
+                  "requestId": "req_abc123",
+                  "status": "PENDING",
+                  "message": "Solicitud de lista de ordenes recibida"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/requests/{request_id}": {
+      "get": {
+        "tags": ["requests"],
+        "summary": "Consulta el estado de una solicitud",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestId"
+          },
+          {
+            "$ref": "#/components/parameters/SessionCookie"
+          },
+          {
+            "$ref": "#/components/parameters/XClientId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estado de solicitud",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestStatusResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "SessionCookie": {
+        "name": "session_id",
+        "in": "cookie",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "XClientId": {
+        "name": "X-Client-Id",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Identificador alternativo para clientes sin sesion."
+      },
+      "ProductId": {
+        "name": "product_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "example": "hab_001"
+      },
+      "UserId": {
+        "name": "user_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "example": "usr_1234abcd"
+      },
+      "OrderId": {
+        "name": "order_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "example": "ord_1234abcd"
+      },
+      "RequestId": {
+        "name": "request_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "example": "req_1234abcd"
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "No autenticado o identidad requerida",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "No autorizado",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Recurso no encontrado",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ServiceUnavailable": {
+        "description": "Servicio dependiente no disponible",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "CreateUserRequest": {
+        "type": "object",
+        "required": ["name", "email", "password"],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
+      "HealthResponse": {
+        "type": "object",
+        "required": ["status", "service"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok"
+          },
+          "service": {
+            "type": "string",
+            "example": "api-gateway"
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "required": ["user_id"],
+        "properties": {
+          "user_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "OkResponse": {
+        "type": "object",
+        "required": ["ok"],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        }
+      },
+      "OrderRequest": {
+        "type": "object",
+        "required": ["productId", "quantity"],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "Opcional en gateway; se reemplaza por el usuario autenticado."
+          },
+          "productId": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1
+          }
+        }
+      },
+      "PendingRequestResponse": {
+        "type": "object",
+        "required": ["type", "requestId", "status", "message"],
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["PENDING"]
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "RequestStatusResponse": {
+        "type": "object",
+        "required": ["requestId", "status"],
+        "properties": {
+          "requestId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["PENDING", "COMPLETED", "FAILED"]
+          },
+          "response": {
+            "nullable": true,
+            "description": "Payload final del servicio cuando la solicitud se completa."
+          },
+          "error": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "SessionResponse": {
+        "type": "object",
+        "required": ["user_id"],
+        "properties": {
+          "user_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      }
+    }
+  }
+}
