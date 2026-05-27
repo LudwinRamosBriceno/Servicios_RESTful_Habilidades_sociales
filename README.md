@@ -4,6 +4,32 @@
 
 Plataforma de microservicios REST para gestionar habilidades sociales como productos.
 
+## Finalidad del Proyecto
+
+NovaLink es una plataforma distribuida orientada a la gestión de habilidades sociales mediante una arquitectura de microservicios basada en eventos (Event-Driven Architecture).
+
+El objetivo principal del proyecto es demostrar el desacoplamiento entre servicios utilizando RabbitMQ como broker de mensajería, Kubernetes para orquestación y comunicación asincrónica entre componentes independientes.
+
+El sistema permite:
+
+- Gestionar usuarios y habilidades sociales.
+- Consultar y registrar productos/habilidades disponibles.
+- Procesar pedidos de habilidades mediante eventos asincrónicos.
+- Actualizar perfiles de usuario automáticamente tras la confirmación de un pedido.
+- Generar notificaciones desacopladas mediante consumidores de eventos.
+- Implementar autenticación centralizada basada en sesiones HTTP-only.
+- Registrar solicitudes asincrónicas y sus estados mediante un API Gateway (Backend) con soporte SSE.
+
+Además, el proyecto busca aplicar principios de:
+
+- Arquitectura orientada a eventos (EDA).
+- Arquitectura en capas.
+- Desacoplamiento entre microservicios.
+- Persistencia independiente por servicio.
+- Orquestación con Kubernetes.
+- Resiliencia básica mediante colas de mensajería.
+- Automatización y despliegue containerizado.
+
 ## Tecnologías utilizadas
 
 - Kubernetes (Minikube)
@@ -12,6 +38,34 @@ Plataforma de microservicios REST para gestionar habilidades sociales como produ
 - PostgreSQL
 - React + Vite y Javascript
 - SQLAlchemy y Alembic
+
+## Estado del Proyecto
+
+Actualmente el sistema implementa lo siguiente:
+
+### Componentes principales
+
+- API Gateway (Backend) con comunicación SSE.
+- Auth Service con autenticación mediante cookies HTTP-only.
+- Users Service.
+- Products Service.
+- Orders Service.
+- Notifications Service.
+- RabbitMQ como broker de eventos.
+- Bases de datos PostgreSQL independientes por servicio.
+- Orquestación mediante Kubernetes (Minikube).
+
+### Funcionalidades implementadas
+
+- Flujo completo de autenticación y validación de sesión.
+- Procesamiento asincrónico de pedidos mediante RabbitMQ.
+- Comunicación desacoplada entre servicios mediante eventos.
+- Actualización automática de habilidades del usuario.
+- Notificaciones basadas en eventos.
+- Persistencia de solicitudes asincrónicas en `gateway-db`.
+- Streaming de respuestas al frontend mediante SSE.
+- Recuperación básica ante caída temporal de microservicios consumidores.
+- Despliegue funcional en Kubernetes mediante Deployments y Services.
 
 ## Diagramas C4 y secuencia
 
@@ -26,7 +80,7 @@ Plataforma de microservicios REST para gestionar habilidades sociales como produ
 <img src="Diagramas/Diagrama%20de%20Componentes.svg" alt="Diagrama de Componentes" width="700px" />
 
 ### Diagrama de Secuencia
-<img src="Diagramas/Diagramas Proyecto 2 EDA - Diagrama de Secuencia.svg" alt="Diagrama de Secuencia" width="700px" />
+<img src="Diagramas/Diagrama de Secuencia.svg" alt="Diagrama de Secuencia" width="700px" />
 
 
 ### Diagrama de arquitectura EDA
@@ -39,116 +93,7 @@ El siguiente link lo redirige al mapa de Producers y Consumers y a la Topología
 
 # Manual de API RESTful
 
-
-## Tabla de contenidos
-
-- [Users](#users)
-- [Products](#products)
-- [Orders](#orders)
-
----
-
-## Users
-
-### Descripción general
-
-El servicio **users** permite crear, obtener y modificar los usuarios que utilizan NovaLink.
-
-- **Puerto del servicio (directo):** `8001`
-- **Directo al microservicio (dentro del clúster):** `http://localhost:8001/users`
-- **A través del API Gateway:** `http://localhost:8080/api/users`
-
-### Modelo base
-
-Esquema utilizado tanto para crear un usuario como para actualizarlo _(todos los campos son opcionales en actualización)_.
-
-```json
-{
-  "name": "string",
-  "email": "usuario@correo.com",
-  "password": "string"
-}
-```
-
-### Endpoints
-
-| Método | URL | Descripción | Parámetros | Respuesta |
-|--------|-----|-------------|------------|-----------|
-| `GET` | `/api/users` | Retorna una lista de todos los usuarios registrados | — | `200 OK` · `404` No hay usuarios registrados |
-| `GET` | `/api/users/{user_id}` | Obtener la información de un usuario específico | — | `200 OK` · `404` No hay usuarios registrados |
-| `POST` | `/api/users` | Permite crear un nuevo usuario | `name`: string · `email`: string · `password`: string | `200 OK` · `409` Nombre ya existente · `422` Faltan campos o email inválido |
-| `PUT` | `/api/users/{user_id}` | Actualizar un usuario existente | _(Campos opcionales)_ `name`: string · `email`: string · `password`: string | `200 OK` · `404` Usuario no encontrado · `409` Nombre ya existente · `422` Faltan campos o email inválido |
-
----
-
-## Products
-
-### Descripción general
-
-El servicio **products** permite crear, obtener y modificar los productos en stock que ofrece NovaLink.
-
-- **Puerto del servicio (directo):** `8002`
-- **Directo al microservicio (dentro del clúster):** `http://localhost:8002/products`
-- **A través del API Gateway:** `http://localhost:8080/api/products`
-
-### Modelo base
-
-Esquema utilizado tanto para crear un producto como para actualizarlo _(obligatorio solo para estas acciones)_.
-
-```json
-{
-  "name": "string",
-  "description": "string",
-  "stock": integer,
-  "active": Boolean
-}
-```
-
-### Endpoints
-
-| Método | URL | Descripción | Parámetros | Respuesta |
-|--------|-----|-------------|------------|-----------|
-| `GET` | `/api/products` | Retorna una lista de todos los productos registrados | — | `200 OK` |
-| `GET` | `/api/products/{product_id}` | Obtener un producto por id | — | `200 OK` · `404` Producto no encontrado |
-| `POST` | `/api/products` | Crear un nuevo producto | `name`: string · `description`: string · `stock`: integer · `active`: boolean | `200 OK` · `409` Producto ya existe |
-| `PUT` | `/api/products/{product_id}` | Actualizar un producto existente por id | `name`: string · `description`: string · `stock`: integer · `active`: boolean | `200 OK` · `404` Producto no encontrado |
-| `DELETE` | `/api/products/{product_id}` | Eliminar un producto por id | — | `200 OK` · `404` Producto no encontrado |
-| `PUT` | `/api/products/{product_id}/stock` | Descontar stock de un producto por id | `quantity`: integer | `200 OK` · `404` Producto no encontrado · `422` Cantidad debe ser > 0 · `422` Stock insuficiente |
-
----
-
-## Orders
-
-### Descripción general
-
-El servicio **orders** permite crear pedidos de productos asociados a un usuario existente.
-
-- **Puerto del servicio (directo):** `8000`
-- **Directo al microservicio (dentro del clúster):** `http://localhost:8000/orders`
-- **A través del API Gateway:** `http://localhost:8080/api/orders`
-
-### Modelo base
-
-Esquema utilizado tanto para crear una orden como para actualizarla _(obligatorio solo para estas acciones)_.
-
-```json
-{
-  "user_id": "string",
-  "product_id": "string",
-  "quantity": integer,
-  "status": "string",
-  "skill_points": integer,
-  "created_at": "string"
-}
-```
-
-### Endpoints
-
-| Método | URL | Descripción | Parámetros | Respuesta |
-|--------|-----|-------------|------------|-----------|
-| `POST` | `/api/orders` | Creación de una orden | `user_id`: string · `product_id`: string · `quantity`: integer · `status`: string · `skill_points`: integer · `created_at`: string | `201` Orden completada con éxito · `202` Habilidad en propiedad, puntos agregados · `422` Cantidad debe ser > 0 · `422` Stock insuficiente |
-| `GET` | `/api/orders/{order_id}` | Obtener detalles de una orden por id | — | `200 OK` · `404` Orden no encontrada |
-| `GET` | `/api/orders/user/{user_id}` | Obtener órdenes asociadas a un usuario por id de usuario | — | `200 OK` · `404` Usuario no encontrado |
+[Manual de los endpoints expuestos por el API Gateway (Backend) en formato OpenAPI](/Backend/OpenAPI/api-gateway.openapi.json)
 
 # Architecture Decision Records
 
@@ -156,134 +101,14 @@ Esquema utilizado tanto para crear una orden como para actualizarla _(obligatori
 
 ## Tabla de contenidos
 
-- [ADR 001 — Arquitectura híbrida con API Gateway](#adr-001)
+- [ADR 001 — Arquitectura orientada completamente a eventos para comunicación entre servicios](#adr-001)
 - [ADR 002 — Kubernetes (Minikube) para orquestación de contenedores](#adr-002)
 - [ADR 003 — Bases de datos separadas con volúmenes dedicados](#adr-003)
-- [ADR 004 — Arquitectura orientada completamente a eventos para comunicación entre servicios](#adr-004)
-- [ADR 005 — Uso de cookie `HttpOnly` para `session_id` e invalidación de sesiones tras caída o reinicio del `auth-service`](#adr-005)
+- [ADR 004 — Uso de cookie `HttpOnly` para `session_id` e invalidación de sesiones tras caída o reinicio del `auth-service`](#adr-004)
 
 ---
 
 ## ADR 001
-
-### Arquitectura híbrida con API Gateway simple y comunicación síncrona directa entre microservicios
-
-**Estado:** `Accepted`
-
-### Contexto
-
-La plataforma a diseñar e implementar debe seguir un ecosistema de microservicios RESTful, con una interfaz de usuario, un backend con la lógica de negocio y almacenamiento en base de datos. El sistema contiene tres microservicios independientes: **Usuarios**, **Productos** y **Pedidos**.
-
-El proyecto tiene una duración de 3 semanas y el equipo de desarrollo tiene experiencia y conocimiento limitado en arquitecturas de microservicios.
-
-### Decisión
-
-Se utilizará una arquitectura híbrida fácil de implementar, depurar y desplegar en un clúster, considerando que solo se tendrán tres servicios y el volumen de transacciones será bajo. Se usará:
-
-- **Un API Gateway simple** (sin lógica adicional) que actuará únicamente como _reverse proxy_ o punto de entrada para enrutar peticiones HTTP provenientes del frontend hacia los servicios correspondientes: Usuarios, Productos y Pedidos.
-- **Comunicación síncrona directa** mediante HTTP client entre servicios. El servicio de Pedidos se comunica con Usuarios y Productos; el servicio de Usuarios tiene contacto con Productos.
-
-### Consecuencias
-
-####  Positivas
-
-- Simplicidad y rapidez de implementación.
-- El API Gateway expone solo ciertos endpoints hacia el exterior, consumidos por el frontend, y enruta a los servicios internos del clúster.
-- El Gateway incorpora una capa de seguridad al no revelar las URIs internas de los microservicios.
-- La comunicación síncrona por HTTP es fácil de depurar con logs y herramientas como Postman.
-- Menor latencia en el flujo de pedido al no introducir mediadores.
-- Cada microservicio mantiene su propia base de datos (autonomía de datos).
-- Si el API Gateway falla, los servicios pueden seguir funcionando independientemente.
-
-####  Negativas
-
-- **Acoplamiento temporal:** si Productos o Usuarios falla, Pedidos no puede completar la operación, generando errores en cascada.
-- **Mayor latencia en cadenas largas:** un pedido implica 3 llamadas HTTP internas (validar usuario, validar producto, actualizar perfil).
-- **Acoplamiento en Pedidos:** si en el futuro se añaden más servicios (como facturación), Pedidos se volvería un "orquestador" acoplado.
-- Si el API Gateway falla, el cliente no puede consumir los servicios.
-
----
-
-## ADR 002
-
-### Uso de Kubernetes (Minikube) para orquestación de contenedores
-
-**Estado:** `Accepted`
-
-### Contexto
-
-Se requiere que todos los servicios (Usuarios, Productos, Pedidos y sus respectivas bases de datos) sean containerizados con Docker y ejecutados en un entorno que simule una infraestructura cloud real. Se debe orquestar los contenedores usando Kubernetes, específicamente **Minikube** para generar un clúster local, y escribir los manifiestos YAML necesarios (Deployments y Services) para que la aplicación sea resiliente y accesible dentro del clúster.
-
-El equipo tiene 3 semanas de desarrollo y experiencia limitada en orquestación.
-
-### Decisión
-
-Se usará **Minikube** para crear un clúster Kubernetes de un solo nodo en el entorno local de desarrollo:
-
-- Cada servicio y base de datos será desplegado mediante un **Deployment** (define réplicas, imagen Docker y puertos).
-- Cada servicio será expuesto internamente mediante un **Service de tipo `ClusterIP`**.
-- El API Gateway tendrá un **Service de tipo `NodePort`** para acceso desde el frontend o desde fuera del clúster (pruebas con Postman).
-- El API Gateway será un servicio independiente, de modo que si falla, los demás servicios sigan funcionando y viceversa.
-
-### Consecuencias
-
-####  Positivas
-
-- Cumple con el requisito explícito de orquestar contenedores con Kubernetes y Minikube.
-- Minikube es gratuito, se ejecuta localmente y no requiere recursos cloud ni cuentas de pago.
-- Los Services de Kubernetes proveen descubrimiento de servicio por nombre DNS, resolviendo el problema de IPs dinámicas.
-- Si un contenedor falla, Kubernetes lo reinicia automáticamente gracias al Deployment.
-- Los manifiestos YAML pueden adaptarse fácilmente a un clúster cloud real en el futuro.
-
-####  Negativas
-
-- El equipo debe aprender conceptos de Kubernetes (Pods, Deployments, Services, `kubectl`) y escribir YAMLs, lo que consume tiempo de investigación.
-- Mayor consumo de recursos locales: Minikube requiere al menos **2 CPUs y 4 GB de RAM**, lo que puede ser limitante en equipos no especializados.
-- Cada cambio en el código requiere reconstruir la imagen Docker, actualizarla en Minikube y reiniciar los Pods.
-- Minikube está diseñado para desarrollo y pruebas, no para entornos escalables.
-
----
-
-## ADR 003
-
-### Bases de datos separadas por servicio con volúmenes dedicados para persistencia
-
-**Estado:** `Accepted`
-
-### Contexto
-
-Los requerimientos establecen que cada microservicio debe tener su propia base de datos para demostrar la autonomía del sistema. Como los contenedores Docker pierden datos al reiniciarse, es necesario garantizar la persistencia de la información.
-
-### Decisión
-
-Cada base de datos usará un **PersistentVolumeClaim (PVC)** que solicita almacenamiento persistente en Minikube. Las capacidades asignadas son:
-
-| Servicio | Almacenamiento | Justificación |
-|----------|---------------|---------------|
-| Usuarios | 1 GB | Volumen de datos estable |
-| Productos | 1 GB | Volumen de datos estable |
-| Pedidos | 2 GB | Mayor tasa de crecimiento por transacciones |
-
-Los datos se almacenarán en el volumen montado en una ruta concreta dentro de cada contenedor de base de datos. Se utilizará **PostgreSQL** como motor de base de datos relacional, dado el conocimiento del equipo y la naturaleza relacional de los datos.
-
-### Consecuencias
-
-####  Positivas
-
-- Cumple con el requisito de que cada servicio gestiona su propia base de datos (independencia de datos).
-- Los volúmenes persistentes evitan la pérdida de datos cuando los contenedores o Pods se reinician o eliminan.
-- La asignación de 2 GB a Pedidos anticipa un mayor volumen sin desperdiciar recursos en los otros servicios.
-- Los PVCs de Minikube utilizan el almacenamiento local del nodo, suficiente para un MVP.
-- Separar las bases de datos permite escalar cada servicio de forma independiente en el futuro.
-
-####  Negativas
-
-- Implica mayor consumo de recursos físicos.
-- Si el volumen se corrompe, los datos de las tres bases de datos se pierden (a menos que se configuren backups).
-
----
-
-## ADR 004
 
 ### Arquitectura orientada completamente a eventos para comunicación entre servicios
 
@@ -295,7 +120,7 @@ Durante la fase de diseño del proyecto, se realizó una consulta formal sobre e
 
 Con base en dicha aclaración, el sistema fue diseñado bajo un enfoque completamente orientado a eventos, incluyendo operaciones tradicionalmente síncronas como consultas de información (`GET`), las cuales fueron modeladas mediante intercambio de eventos y respuestas asincrónicas.
 
-Posteriormente, durante la revisión en vivo del proyecto, se aclaró que las operaciones `GET` no necesariamente requerían implementarse mediante eventos y que podían resolverse mediante comunicación HTTP síncrona. Sin embargo, dado que la arquitectura ya se encontraba implementada y funcional bajo el modelo orientado a eventos, se decidió mantener el diseño original justificando sus beneficios arquitectónicos y académicos.
+Posteriormente, durante sesión de dudas en vivo del proyecto, se aclaró que las operaciones `GET` no necesariamente requerían implementarse mediante eventos y que podían resolverse mediante comunicación HTTP síncrona. Sin embargo, dado que la arquitectura ya se encontraba implementada y funcional bajo el modelo orientado a eventos, se decidió mantener el diseño original justificando sus beneficios arquitectónicos y académicos.
 
 ### Decisión
 
@@ -305,7 +130,7 @@ Toda la comunicación entre microservicios se implementará mediante RabbitMQ y 
 - Consultas de información equivalentes a operaciones `GET`.
 - Intercambio de respuestas mediante colas de respuesta temporales o patrones request-response asincrónicos.
 
-El API Gateway actúa como punto de entrada único y coordina la publicación y recepción de eventos hacia los servicios internos.
+El API Gateway (Backend) actúa como punto de entrada único y coordina la publicación y recepción de eventos hacia los servicios internos.
 
 ### Consecuencias
 
@@ -327,38 +152,152 @@ El API Gateway actúa como punto de entrada único y coordina la publicación y 
 
 ---
 
-## ADR 005
+## ADR 002
 
-### Uso de cookie `HttpOnly` para `session_id` e invalidación de sesiones tras caída o reinicio del `auth-service`
+### Uso de Kubernetes (Minikube) para orquestación de contenedores
 
 **Estado:** `Accepted`
 
 ### Contexto
 
-Se detecto que el manejo de sesiones basado en tokens expuestos en el cliente podia ser vulnerable ante acceso por scripts en el navegador. Ademas, las sesiones activas se mantenian en memoria dentro del `auth-service`, lo que generaba inconsistencias cuando el servicio se detenia o reiniciaba: el cliente conservaba un token aparentemente valido, pero el servidor ya no tenia su sesion registrada.
+Se requiere que todos los servicios del sistema sean containerizados con Docker y ejecutados en un entorno que simule una infraestructura cloud real. El sistema está compuesto por múltiples microservicios y componentes de soporte:
 
-Para mitigar ambos problemas, se cambio el mecanismo de autenticacion a un identificador de sesion persistido en una cookie `HttpOnly`, y se definio que las sesiones deben invalidarse si el `auth-service` se reinicia o se cae, ya que el almacenamiento de sesiones no es persistente.
+- API Gateway (Backend)
+- Auth Service
+- Users Service
+- Products Service
+- Orders Service
+- Notifications Service
+- RabbitMQ
+- Bases de datos PostgreSQL independientes
+
+Se debe orquestar la infraestructura utilizando Kubernetes, específicamente **Minikube**, mediante manifiestos YAML (`Deployment`, `Service` y `PersistentVolumeClaim`) para garantizar despliegue, descubrimiento de servicios y resiliencia básica.
 
 ### Decisión
 
-- El identificador de sesion se entrega al cliente en una cookie `HttpOnly` (`session_id`).
-- El cliente ya no recibe ni almacena el token de sesion en almacenamiento local.
-- Las sesiones activas se mantienen en memoria del `auth-service`.
-- Si el `auth-service` se reinicia o se cae, todas las sesiones se invalidan automaticamente y el usuario debe reautenticarse.
+Se utilizará **Minikube** como clúster Kubernetes local de un solo nodo para desplegar toda la plataforma:
+
+- Cada microservicio y base de datos se desplegará mediante un **Deployment**.
+- Los microservicios internos y bases de datos se expondrán mediante **Services tipo `ClusterIP`**.
+- El API Gateway (Backend) se expondrá mediante un **Service tipo `NodePort`** para permitir acceso desde el frontend y herramientas externas como Postman.
+- RabbitMQ se desplegará como servicio interno del clúster para gestionar comunicación asincrónica basada en eventos.
+- Kubernetes manejará el reinicio automático de Pods en caso de fallos.
+- Los Services de Kubernetes proveerán descubrimiento de servicios mediante DNS interno del clúster.
 
 ### Consecuencias
 
 #### Positivas
 
-- Se reduce la exposicion del token frente a ataques XSS.
-- Se evita la persistencia de credenciales en el cliente.
-- Se alinea el comportamiento del cliente con la realidad del servidor cuando este se reinicia.
-- Se simplifica el control de sesion desde el `auth-service`.
+- Cumple con el requisito de utilizar Kubernetes y Minikube para orquestación.
+- Permite desplegar múltiples servicios desacoplados dentro del mismo clúster.
+- Kubernetes proporciona descubrimiento de servicios mediante DNS interno.
+- RabbitMQ y las bases de datos pueden comunicarse internamente sin exponer puertos externos innecesarios.
+- Los Deployments permiten recuperación automática de Pods ante fallos.
+- Los manifiestos YAML pueden adaptarse posteriormente a un entorno cloud real.
+- Facilita pruebas de resiliencia y desacoplamiento entre servicios.
 
 #### Negativas
 
-- Todas las sesiones se pierden ante reinicios del servicio.
-- No es posible mantener sesiones activas sin un almacenamiento persistente adicional.
-- La experiencia de usuario puede verse afectada en despliegues o fallos del servicio.
-- Se requiere cuidado adicional en ambientes con multiples instancias del `auth-service` si no se comparte el estado.
-- Mayor complejidad de orquestación: se deben crear 3 deployments de bases de datos y 4 servicios (incluyendo el API Gateway).
+- El equipo debe aprender conceptos de Kubernetes (`Pods`, `Deployments`, `Services`, `PVCs`, `kubectl`).
+- Mayor consumo de recursos locales debido a Minikube y múltiples contenedores simultáneos.
+- Cada modificación requiere reconstrucción de imágenes Docker y reinicio de Pods.
+- Minikube está orientado a desarrollo y pruebas, no a producción escalable.
+- El debugging distribuido entre múltiples Pods y RabbitMQ aumenta la complejidad operativa.
+
+---
+
+## ADR 003
+
+### Bases de datos separadas por servicio con persistencia mediante volúmenes
+
+**Estado:** `Accepted`
+
+### Contexto
+
+La arquitectura del sistema sigue un enfoque de microservicios desacoplados, donde cada servicio es responsable de sus propios datos. Además, el sistema utiliza comunicación asincrónica mediante eventos, por lo que se requiere persistencia tanto para los datos de negocio como para el seguimiento de solicitudes procesadas por el API Gateway (Backend).
+
+Debido a que los contenedores Docker pierden sus datos al reiniciarse, es necesario utilizar almacenamiento persistente dentro del clúster Kubernetes.
+
+### Decisión
+
+Cada microservicio mantendrá su propia base de datos PostgreSQL independiente utilizando un **PersistentVolumeClaim (PVC)** para persistencia de datos en Minikube.
+
+Las bases de datos definidas son:
+
+| Servicio | Base de Datos | Almacenamiento |
+|----------|---------------|---------------|
+| Users Service | users-db | 1 GB |
+| Products Service | products-db | 1 GB |
+| Orders Service | orders-db | 2 GB |
+| API Gateway (Backend) | gateway-db | 1 GB |
+
+Los volúmenes persistentes serán montados dentro de cada contenedor PostgreSQL para evitar pérdida de información ante reinicios de Pods o contenedores.
+
+El `gateway-db` será utilizado para registrar solicitudes asincrónicas, incluyendo:
+
+- requestId
+- estado (`PENDING`, `COMPLETED`, `FAILED`)
+- respuestas
+- errores
+- timestamps
+
+### Consecuencias
+
+#### Positivas
+
+- Cada microservicio mantiene independencia de datos y bajo acoplamiento.
+- Los datos persisten aunque los Pods sean reiniciados o recreados.
+- El API Gateway (Backend) puede almacenar el estado de solicitudes asincrónicas y correlacionar respuestas provenientes de RabbitMQ.
+- Permite escalar servicios y bases de datos de forma independiente en el futuro.
+- PostgreSQL es un motor conocido por el equipo y adecuado para relaciones transaccionales.
+
+#### Negativas
+
+- Incrementa el consumo de almacenamiento y recursos del clúster.
+- El manejo de múltiples bases de datos aumenta la complejidad operativa.
+- Las sesiones actuales del Auth Service permanecen en memoria y no sobreviven reinicios del servicio.
+- Los PVCs de Minikube utilizan almacenamiento local, por lo que no existe tolerancia real a fallos físicos del nodo.
+- No existe actualmente un mecanismo automatizado de backup o replicación.
+
+---
+
+## ADR 004
+
+### Uso de cookie `HttpOnly` para manejo de sesiones centralizadas en el `auth-service`
+
+**Estado:** `Accepted`
+
+### Contexto
+
+Inicialmente, el sistema utilizaba autenticación basada en tokens enviados por el cliente en cada solicitud. Posteriormente, se identificó que dicho enfoque exponía las credenciales de autenticación al entorno del navegador, aumentando el riesgo ante ataques XSS o accesos desde scripts del cliente.
+
+Adicionalmente, la arquitectura del sistema ya dependía de un `auth-service` centralizado encargado de validar identidades antes de permitir operaciones protegidas en el API Gateway (Backend). Debido a esto, se decidió adoptar un modelo de sesiones centralizadas utilizando cookies `HttpOnly`.
+
+Actualmente, las sesiones activas se almacenan temporalmente en memoria dentro del `auth-service`. Por esta razón, si el servicio se reinicia o falla, las sesiones activas se pierden y los usuarios deben autenticarse nuevamente.
+
+### Decisión
+
+- El sistema utilizará autenticación basada en sesiones centralizadas gestionadas por el `auth-service`.
+- El cliente recibirá únicamente un identificador de sesión (`session_id`) almacenado en una cookie `HttpOnly`.
+- La cookie no contendrá información sensible del usuario ni tokens JWT.
+- La información de autenticación permanecerá almacenada únicamente en memoria dentro del `auth-service`.
+- El API Gateway (Backend) validará cada solicitud protegida consultando al `auth-service` mediante el endpoint de validación de sesión.
+- Si el `auth-service` se reinicia o falla, las sesiones almacenadas en memoria serán invalidadas automáticamente.
+
+### Consecuencias
+
+#### Positivas
+
+- Se reduce la exposición de credenciales frente a ataques XSS al utilizar cookies `HttpOnly`.
+- El cliente no necesita almacenar tokens en `localStorage` o `sessionStorage`.
+- El control de sesiones y autenticación permanece centralizado en el `auth-service`.
+- El cierre de sesión puede invalidarse inmediatamente desde el servidor.
+- El navegador maneja automáticamente el envío de cookies en solicitudes autenticadas.
+
+#### Negativas
+
+- Las sesiones activas se pierden si el `auth-service` se reinicia o falla.
+- El API Gateway (Backend) depende del `auth-service` para validar autenticación en cada solicitud protegida.
+- No existe persistencia distribuida de sesiones; actualmente las sesiones viven únicamente en memoria.
+- La experiencia de usuario puede verse afectada durante despliegues o reinicios del `auth-service`.
+- Escalar múltiples instancias del `auth-service` requeriría un almacenamiento compartido de sesiones (por ejemplo Redis o base de datos distribuida).
