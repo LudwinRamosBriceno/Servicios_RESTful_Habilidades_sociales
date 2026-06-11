@@ -382,12 +382,12 @@ async def get_user(user_id: str, identity: dict = Depends(get_identity)) -> dict
 
 
 @app.post("/api/users")
-async def create_user(payload: dict, identity: dict = Depends(get_identity)) -> dict:
+async def create_user(payload: dict) -> dict:
     """Solicita el registro de un usuario via eventos."""
     request_id = _create_request(
         EVENT_USERS_CREATE_REQUESTED,
-        identity.get("user_id"),
-        identity.get("client_id"),
+        None,
+        None,
         payload,
     )
     return {

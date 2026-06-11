@@ -21,7 +21,7 @@ export function registerUser(name, email, password) {
     }
     // Para registro anónimo, enviar X-Client-Id según contrato del gateway
     const clientId = getClientId()
-    return post('/users', { name, email, password }, { headers: { 'X-Client-Id': clientId } })
+    return post('/users', { name, email, password }, { headers: { 'X-Client-Id': clientId }, omitCredentials: true })
 }
 
 // Función para validar sesión actual (cookie HttpOnly).

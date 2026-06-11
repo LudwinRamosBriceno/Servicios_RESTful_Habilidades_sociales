@@ -4,7 +4,7 @@ const API_URL_BASE = import.meta.env.VITE_API_BASE_URL;
 async function request(path, options = {}) {
 
     // Obtiene la configuración de la solicitud
-    const { method = 'GET', headers = {}, body } = options;
+    const { method = 'GET', headers = {}, body, omitCredentials = false } = options;
 
     console.log(`[Frontend]' API_URL_BASE: ${API_URL_BASE}, Path: ${path}, Method: ${method}, Body:`, body)
 
@@ -18,13 +18,9 @@ async function request(path, options = {}) {
 
     // Realizar la solicitud utilizando fetch con la configuración proporcionada
     const response = await fetch(`${API_URL_BASE}${path}`, {
-        // GET, POST, PUT, DELETE
         method,
-        // Encabezados de la solicitud
         headers: requestHeaders,
-        // Envia cookies HttpOnly para autenticar la sesión.
-        credentials: 'include',
-        // Convertir el cuerpo a JSON si se proporciona
+        credentials: omitCredentials ? 'omit' : 'include',
         body: body ? JSON.stringify(body) : undefined,
     })
 
