@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from .controller import router as user_router
 
@@ -6,6 +7,8 @@ from .controller import router as user_router
 app = FastAPI(title="NovaLink Users Service", version="1.0.0")
 # Registra endpoints funcionales bajo el prefijo definido en el controller.
 app.include_router(user_router)
+
+Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 
 @app.get("/health")

@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 from alembic import command
 from alembic.config import Config
 from pathlib import Path
@@ -9,6 +10,8 @@ from .controller import router as orders_router
 # Inicialización de la aplicación FastAPI y registro del enrutador de órdenes.
 app = FastAPI(title="NovaLink Orders Service", version="1.0.0")
 app.include_router(orders_router)
+
+Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 
 @app.on_event("startup")

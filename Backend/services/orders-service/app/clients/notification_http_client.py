@@ -17,14 +17,7 @@ class NotificationHttpClient:
         self._timeout = timeout_seconds
 
     
-    def send_order_completed(
-        self,
-        order_id: str,
-        user_id: str,
-        skill_name: str,
-        skill_points: int,
-        issued_by: str,
-    ) -> None:
+    def send_order_completed(self, order_id: str, user_id: str, skill_name: str, skill_points: int) -> None:
         """
         Envia una notificación de que una orden ha sido completada.
         """
@@ -33,7 +26,6 @@ class NotificationHttpClient:
             "userId": user_id,
             "skillName": skill_name,
             "skillPoints": skill_points,
-            "issued_by": issued_by,
         }
         
         try:

@@ -27,20 +27,19 @@ spec:
               value: http://notifications-service:8003
             - name: DATABASE_URL
               value: postgresql+psycopg2://postgres@orders-db:5432/orders_db
-            - name: JWT_SECRET_KEY
-              value: dev-secret
-            - name: JWT_ISSUER
-              value: auth-service
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: orders-service
+  labels:
+    app: orders-service
 spec:
   selector:
     app: orders-service
   ports:
     - protocol: TCP
+      name: http
       port: 8000
       targetPort: 8000
   type: ClusterIP
